@@ -1,26 +1,110 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  @apply antialiased;
+}
+
+@layer utilities {
+  .gauge-arc {
+    fill: none;
+    stroke-width: 12;
+    stroke-linecap: round;
+  }
+
+  .gauge-bg {
+    stroke: #232f48;
+  }
+
+  .gauge-value {
+    stroke: #ef4444;
+    stroke-dasharray: 471;
+    stroke-dashoffset: 100;
+    transition: stroke-dashoffset 1s ease-in-out;
+    filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.4));
+  }
+
+  .needle {
+    transition: transform 1s cubic-bezier(0.4, 0.0, 0.2, 1);
+    transform-origin: 100px 100px;
+    transform: rotate(135deg);
+  }
+
+  @keyframes pulse-green {
+    0% {
+      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+    }
+
+    70% {
+      box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
+    }
+
+    100% {
+      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+    }
+  }
+
+  .live-dot {
+    animation: pulse-green 2s infinite;
+  }
+
+  .chart-gradient {
+    background: linear-gradient(180deg, rgba(19, 91, 236, 0.2) 0%, rgba(19, 91, 236, 0) 100%);
+  }
+
+  /* Admin Custom Checkbox */
+  .custom-checkbox {
+    appearance: none;
+    background-color: rgba(255, 255, 255, 0.05);
+    margin: 0;
+    font: inherit;
+    width: 1.15em;
+    height: 1.15em;
+    border: 1px solid #3b4b68;
+    border-radius: 0.25em;
+    display: grid;
+    place-content: center;
+    transition: all 0.2s;
+  }
+
+  .custom-checkbox::before {
+    content: "";
+    width: 0.65em;
+    height: 0.65em;
+    transform: scale(0);
+    transition: 120ms transform ease-in-out;
+    box-shadow: inset 1em 1em white;
+    transform-origin: center;
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  }
+
+  .custom-checkbox:checked {
+    background-color: #135bec;
+    border-color: #135bec;
+  }
+
+  .custom-checkbox:checked::before {
+    transform: scale(1);
+  }
+
+  /* Admin Grid Pattern */
+  .grid-pattern {
+    background-image: radial-gradient(#232f48 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
 }
