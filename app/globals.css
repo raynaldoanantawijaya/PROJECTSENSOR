@@ -20,6 +20,34 @@ body {
   @apply antialiased;
 }
 
+/* Local Font Loading */
+@font-face {
+  font-family: 'Material Symbols Outlined';
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: block;
+  /* Prevents FOUT (Flash of Unstyled Text) */
+  src: url('/fonts/material-symbols.woff2') format('woff2');
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  /* Support for variable fonts */
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
 @layer utilities {
   .gauge-arc {
     fill: none;
@@ -106,5 +134,18 @@ body {
   .grid-pattern {
     background-image: radial-gradient(#232f48 1px, transparent 1px);
     background-size: 20px 20px;
+  }
+
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .custom-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .custom-scrollbar {
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
   }
 }
