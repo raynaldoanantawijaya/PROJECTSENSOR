@@ -15,15 +15,11 @@ function getServiceAccount() {
         }
     }
 
-    // 2. Fallback to local file (Development)
-    try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const localKey = require("./firebase-service-key");
-        return localKey.SERVICE_ACCOUNT_KEY;
-    } catch (e) {
-        console.warn("No local firebase-service-key.ts found. Ensure FIREBASE_SERVICE_ACCOUNT_KEY env var is set in production.");
-        return null; // Let initializeApp fail naturally usually
-    }
+    // 2. Fallback check for Development
+    // Note: We removed the static require("./firebase-service-key") to prevent Vercel build errors.
+    // For local development, please add FIREBASE_SERVICE_ACCOUNT_KEY to your .env.local file.
+    console.warn("FIREBASE_SERVICE_ACCOUNT_KEY not found in environment variables.");
+    return null;
 }
 
 export function getAdminAuth() {
