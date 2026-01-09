@@ -3,14 +3,50 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { authService } from '@/lib/auth';
+import { storageService, User } from '@/lib/storage';
 
 interface AdminSidebarProps {
     isOpen?: boolean;
     onClose?: () => void;
 }
 
+const COMMANDER_EMAIL = process.env.NEXT_PUBLIC_COMMANDER_EMAIL || "anantawijaya212@gmail.com";
+const COMMANDER_NAME = process.env.NEXT_PUBLIC_COMMANDER_NAME || "RAYNALDO ANANTA WIJAYA";
+
 export default function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
     const pathname = usePathname();
+    const [currentUser, setCurrentUser] = React.useState<User | null>(null);
+
+    React.useEffect(() => {
+        const init = async () => {
+            await storageService.init();
+            const users = await storageService.getUsers();
+
+            authService.onAuthStateChanged((firebaseUser) => {
+                if (firebaseUser?.email) {
+                    // FORCE COMMANDER OVERRIDE
+                    if (firebaseUser.email.toLowerCase() === COMMANDER_EMAIL.toLowerCase()) {
+                        setCurrentUser({
+                            id: 'commander',
+                            username: COMMANDER_NAME,
+                            email: firebaseUser.email,
+                            role: 'COMMANDER' as any, // Visual override
+                            subRole: 'all',
+                            permissions: { viewSpeed: true, viewSack: true, viewKwh: true, canEdit: true }
+                        });
+                        return;
+                    }
+
+                    const found = users.find(u => u.email.toLowerCase() === firebaseUser.email!.toLowerCase());
+                    if (found) {
+                        setCurrentUser(found);
+                    }
+                }
+            });
+        };
+        init();
+    }, []);
 
     const isActive = (path: string) => {
         return pathname === path || pathname.startsWith(`${path}/`);
@@ -28,6 +64,8 @@ export default function AdminSidebar({ isOpen = false, onClose }: AdminSidebarPr
             window.location.href = '/admin';
         }
     };
+
+    const isCommander = currentUser?.email.toLowerCase() === COMMANDER_EMAIL.toLowerCase();
 
     return (
         <>
@@ -109,6 +147,30 @@ export default function AdminSidebar({ isOpen = false, onClose }: AdminSidebarPr
                 </nav>
 
                 <div className="p-4 border-t border-[#232f48]">
+                    {/* User Profile Section */}
+                    {currentUser && (
+                        <div className="flex items-center gap-3 mb-4 px-2 p-2 bg-[#1a2336]/50 rounded-lg border border-white/5 mx-[-8px]">
+                            <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-sm border 
+                                ${isCommander ? 'bg-amber-500/20 text-amber-500 border-amber-500/20' : 'bg-blue-500/20 text-blue-500 border-blue-500/20'}`}>
+                                {currentUser?.username?.substring(0, 2).toUpperCase() || 'AD'}
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                                <p className={`text-sm font-bold truncate ${isCommander ? 'text-amber-500' : 'text-white'}`}>
+                                    {currentUser?.username || 'Admin'}
+                                </p>
+                                <div className="flex items-center gap-1.5 text-[10px] text-[#92a4c9]">
+                                    <span className="uppercase font-medium tracking-wide">{currentUser?.role}</span>
+                                    {currentUser?.subRole && (
+                                        <>
+                                            <span className="w-1 h-1 rounded-full bg-[#3b4b68]"></span>
+                                            <span className="uppercase text-white/50">{currentUser.subRole}</span>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <button
                         onClick={handleLogout}
                         className="flex items-center gap-3 w-full p-2.5 rounded-lg hover:bg-red-500/10 text-[#92a4c9] hover:text-red-500 transition-colors text-left group"

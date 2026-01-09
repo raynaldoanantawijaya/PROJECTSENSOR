@@ -10,9 +10,9 @@ export default function ExcelPreviewPage() {
     const [sensors, setSensors] = useState<Sensor[]>([]);
     const [user, setUser] = useState<User | null>(null);
 
-    // CONFIG DIRECT DOWNLOAD (XLSX) - Default Fallback
-    const SPREADSHEET_ID = "1ijV_1Bd3DIQbYt0Vzhuj4YBwEkVIuaygMHwA2jECHMs";
-    const DEFAULT_DOWNLOAD_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=xlsx&gid=0`;
+    // CONFIG DIRECT DOWNLOAD (XLSX) - Default Fallback REMOVED
+    // const SPREADSHEET_ID = "1ijV_1Bd3DIQbYt0Vzhuj4YBwEkVIuaygMHwA2jECHMs";
+    // const DEFAULT_DOWNLOAD_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=xlsx&gid=0`;
 
     useEffect(() => {
         const init = async () => {
@@ -38,31 +38,51 @@ export default function ExcelPreviewPage() {
         return sensors.filter(s => s.type === type);
     };
 
-    const getSensorDownloadUrl = (sensor: Sensor) => {
-        let url = DEFAULT_DOWNLOAD_URL;
-        if (sensor.spreadsheetUrl) {
-            try {
-                const urlObj = new URL(sensor.spreadsheetUrl);
-                const pathParts = urlObj.pathname.split('/');
-                const dIndex = pathParts.indexOf('d');
-                if (dIndex !== -1 && pathParts[dIndex + 1]) {
-                    const spreadSheetId = pathParts[dIndex + 1];
-                    let gid = "0";
-                    const hashGid = urlObj.hash.match(/gid=(\d+)/);
-                    const searchGid = urlObj.searchParams.get("gid");
-                    if (searchGid) gid = searchGid;
-                    else if (hashGid) gid = hashGid[1];
+    const getSensorDownloadUrl = (sensor: Sensor): string | null => {
+        if (!sensor.spreadsheetUrl || sensor.spreadsheetUrl.trim() === "") return null;
 
-                    url = `https://docs.google.com/spreadsheets/d/${spreadSheetId}/export?format=xlsx&gid=${gid}`;
-                } else {
-                    url = sensor.spreadsheetUrl.replace(/\/edit.*$/, '/export?format=xlsx');
-                }
-            } catch (e) {
-                // Fallback regex if URL parsing fails
-                url = sensor.spreadsheetUrl.replace(/\/edit.*$/, '/export?format=xlsx');
+        let url = sensor.spreadsheetUrl;
+        try {
+            // Basic validation check
+            if (!url.includes("docs.google.com/spreadsheets")) {
+                // If it's not a google sheet url, strictly speaking we might want to allow it 
+                // if it's a direct link to another file, but for now let's assume sheets.
+                // If valid elsewhere, return as is? No, let's be strict or return null if not recognizable.
+                // Assuming mostly Google Sheets for this project.
+                // Return null if it doesn't look like a URL at all.
+                if (!url.startsWith('http')) return null;
             }
+
+            const urlObj = new URL(url);
+            const pathParts = urlObj.pathname.split('/');
+            const dIndex = pathParts.indexOf('d');
+            if (dIndex !== -1 && pathParts[dIndex + 1]) {
+                const spreadSheetId = pathParts[dIndex + 1];
+                let gid = "0";
+                const hashGid = urlObj.hash.match(/gid=(\d+)/);
+                const searchGid = urlObj.searchParams.get("gid");
+                if (searchGid) gid = searchGid;
+                else if (hashGid) gid = hashGid[1];
+
+                return `https://docs.google.com/spreadsheets/d/${spreadSheetId}/export?format=xlsx&gid=${gid}`;
+            } else {
+                return url.replace(/\/edit.*$/, '/export?format=xlsx');
+            }
+        } catch (e) {
+            // Fallback: If it has /edit, try to swap. Otherwise return raw if valid URL? 
+            // Better to return null if we can't guarantee a download link.
+            if (url.includes('/edit')) {
+                return url.replace(/\/edit.*$/, '/export?format=xlsx');
+            }
+            return null;
         }
-        return url;
+    };
+
+    const handleDownloadClick = (e: React.MouseEvent<HTMLAnchorElement>, url: string | null) => {
+        if (!url) {
+            e.preventDefault();
+            alert("Tidak ada file yang bisa didownload");
+        }
     };
 
     const speedSensors = getSensorsByType('speed');
@@ -108,40 +128,43 @@ export default function ExcelPreviewPage() {
                         </div>
                         {speedSensors.length > 0 ? (
                             <div className="divide-y divide-gray-100 dark:divide-border-dark/50">
-                                {speedSensors.map((sensor) => (
-                                    <div key={sensor.id} className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-[#1e2736]/50 transition-colors group">
-                                        <div className="flex items-center gap-4">
-                                            <div className="size-9 rounded-lg bg-green-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-green-200 dark:border-emerald-500/20">
-                                                <span className="material-symbols-outlined text-sm">description</span>
+                                {speedSensors.map((sensor) => {
+                                    const downloadUrl = getSensorDownloadUrl(sensor);
+                                    return (
+                                        <div key={sensor.id} className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-[#1e2736]/50 transition-colors group">
+                                            <div className="flex items-center gap-4">
+                                                <div className="size-9 rounded-lg bg-green-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-green-200 dark:border-emerald-500/20">
+                                                    <span className="material-symbols-outlined text-sm">description</span>
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-semibold text-slate-900 dark:text-gray-200 group-hover:text-primary transition-colors">Report {sensor.name}</p>
+                                                    <p className="text-xs text-slate-500">Updated today at 08:00 AM</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="text-sm font-semibold text-slate-900 dark:text-gray-200 group-hover:text-primary transition-colors">Report {sensor.name}</p>
-                                                <p className="text-xs text-slate-500">Updated today at 08:00 AM</p>
-                                            </div>
-                                        </div>
 
-                                        <div className="flex items-center gap-2">
-                                            {/* PREVIEW -> INTERNAL */}
-                                            <Link
-                                                href={`/dashboard/excel/${sensor.id}?type=speed`}
-                                                className="size-9 flex items-center justify-center text-slate-400 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 hover:text-white hover:bg-primary dark:hover:bg-primary rounded-lg transition-colors border border-transparent hover:border-primary"
-                                                title="Preview Data"
-                                            >
-                                                <span className="material-symbols-outlined text-[20px]">visibility</span>
-                                            </Link>
-                                            {/* DOWNLOAD -> DIRECT XLSX DYNAMIC */}
-                                            <a
-                                                href={getSensorDownloadUrl(sensor)}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="size-9 flex items-center justify-center text-slate-400 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 hover:text-white hover:bg-green-600 dark:hover:bg-green-600 rounded-lg transition-colors border border-transparent hover:border-green-600"
-                                                title="Download .XLSX"
-                                            >
-                                                <span className="material-symbols-outlined text-[20px]">download</span>
-                                            </a>
+                                            <div className="flex items-center gap-2">
+                                                {/* PREVIEW -> INTERNAL */}
+                                                <Link
+                                                    href={`/dashboard/excel/${sensor.id}?type=speed`}
+                                                    className="size-9 flex items-center justify-center text-slate-400 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 hover:text-white hover:bg-primary dark:hover:bg-primary rounded-lg transition-colors border border-transparent hover:border-primary"
+                                                    title="Preview Data"
+                                                >
+                                                    <span className="material-symbols-outlined text-[20px]">visibility</span>
+                                                </Link>
+                                                {/* DOWNLOAD -> DIRECT XLSX DYNAMIC */}
+                                                <a
+                                                    href={downloadUrl || "#"}
+                                                    onClick={(e) => handleDownloadClick(e, downloadUrl)}
+                                                    download={!!downloadUrl}
+                                                    className={`size-9 flex items-center justify-center text-slate-400 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 hover:text-white hover:bg-green-600 dark:hover:bg-green-600 rounded-lg transition-colors border border-transparent hover:border-green-600 ${!downloadUrl ? 'opacity-50 cursor-pointer' : ''}`}
+                                                    title={downloadUrl ? "Download .XLSX" : "No file available (Tampilkan pesan)"}
+                                                >
+                                                    <span className="material-symbols-outlined text-[20px]">download</span>
+                                                </a>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         ) : (
                             <div className="p-6 text-center text-sm text-slate-500 dark:text-slate-400">
@@ -170,37 +193,40 @@ export default function ExcelPreviewPage() {
                         </div>
                         {sackSensors.length > 0 ? (
                             <div className="divide-y divide-gray-100 dark:divide-border-dark/50">
-                                {sackSensors.map((sensor) => (
-                                    <div key={sensor.id} className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-[#1e2736]/50 transition-colors group">
-                                        <div className="flex items-center gap-4">
-                                            <div className="size-9 rounded-lg bg-green-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-green-200 dark:border-emerald-500/20">
-                                                <span className="material-symbols-outlined text-sm">description</span>
+                                {sackSensors.map((sensor) => {
+                                    const downloadUrl = getSensorDownloadUrl(sensor);
+                                    return (
+                                        <div key={sensor.id} className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-[#1e2736]/50 transition-colors group">
+                                            <div className="flex items-center gap-4">
+                                                <div className="size-9 rounded-lg bg-green-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-green-200 dark:border-emerald-500/20">
+                                                    <span className="material-symbols-outlined text-sm">description</span>
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-semibold text-slate-900 dark:text-gray-200 group-hover:text-primary transition-colors">Report {sensor.name}</p>
+                                                    <p className="text-xs text-slate-500">Updated today at 08:30 AM</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="text-sm font-semibold text-slate-900 dark:text-gray-200 group-hover:text-primary transition-colors">Report {sensor.name}</p>
-                                                <p className="text-xs text-slate-500">Updated today at 08:30 AM</p>
+                                            <div className="flex items-center gap-2">
+                                                <Link
+                                                    href={`/dashboard/excel/${sensor.id}?type=sack`}
+                                                    className="size-9 flex items-center justify-center text-slate-400 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 hover:text-white hover:bg-primary dark:hover:bg-primary rounded-lg transition-colors border border-transparent hover:border-primary"
+                                                    title="Preview Data"
+                                                >
+                                                    <span className="material-symbols-outlined text-[20px]">visibility</span>
+                                                </Link>
+                                                <a
+                                                    href={downloadUrl || "#"}
+                                                    onClick={(e) => handleDownloadClick(e, downloadUrl)}
+                                                    download={!!downloadUrl}
+                                                    className={`size-9 flex items-center justify-center text-slate-400 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 hover:text-white hover:bg-green-600 dark:hover:bg-green-600 rounded-lg transition-colors border border-transparent hover:border-green-600 ${!downloadUrl ? 'opacity-50 cursor-pointer' : ''}`}
+                                                    title={downloadUrl ? "Download .XLSX" : "No file available (Tampilkan pesan)"}
+                                                >
+                                                    <span className="material-symbols-outlined text-[20px]">download</span>
+                                                </a>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <Link
-                                                href={`/dashboard/excel/${sensor.id}?type=sack`}
-                                                className="size-9 flex items-center justify-center text-slate-400 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 hover:text-white hover:bg-primary dark:hover:bg-primary rounded-lg transition-colors border border-transparent hover:border-primary"
-                                                title="Preview Data"
-                                            >
-                                                <span className="material-symbols-outlined text-[20px]">visibility</span>
-                                            </Link>
-                                            <a
-                                                href={getSensorDownloadUrl(sensor)}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="size-9 flex items-center justify-center text-slate-400 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 hover:text-white hover:bg-green-600 dark:hover:bg-green-600 rounded-lg transition-colors border border-transparent hover:border-green-600"
-                                                title="Download .XLSX"
-                                            >
-                                                <span className="material-symbols-outlined text-[20px]">download</span>
-                                            </a>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         ) : (
                             <div className="p-6 text-center text-sm text-slate-500 dark:text-slate-400">
@@ -229,37 +255,40 @@ export default function ExcelPreviewPage() {
                         </div>
                         {kwhSensors.length > 0 ? (
                             <div className="divide-y divide-gray-100 dark:divide-border-dark/50">
-                                {kwhSensors.map((sensor) => (
-                                    <div key={sensor.id} className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-[#1e2736]/50 transition-colors group">
-                                        <div className="flex items-center gap-4">
-                                            <div className="size-9 rounded-lg bg-green-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-green-200 dark:border-emerald-500/20">
-                                                <span className="material-symbols-outlined text-sm">description</span>
+                                {kwhSensors.map((sensor) => {
+                                    const downloadUrl = getSensorDownloadUrl(sensor);
+                                    return (
+                                        <div key={sensor.id} className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-[#1e2736]/50 transition-colors group">
+                                            <div className="flex items-center gap-4">
+                                                <div className="size-9 rounded-lg bg-green-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-green-200 dark:border-emerald-500/20">
+                                                    <span className="material-symbols-outlined text-sm">description</span>
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-semibold text-slate-900 dark:text-gray-200 group-hover:text-primary transition-colors">Report {sensor.name}</p>
+                                                    <p className="text-xs text-slate-500">Updated today at 09:00 AM</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="text-sm font-semibold text-slate-900 dark:text-gray-200 group-hover:text-primary transition-colors">Report {sensor.name}</p>
-                                                <p className="text-xs text-slate-500">Updated today at 09:00 AM</p>
+                                            <div className="flex items-center gap-2">
+                                                <Link
+                                                    href={`/dashboard/excel/${sensor.id}?type=kwh`}
+                                                    className="size-9 flex items-center justify-center text-slate-400 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 hover:text-white hover:bg-primary dark:hover:bg-primary rounded-lg transition-colors border border-transparent hover:border-primary"
+                                                    title="Preview Data"
+                                                >
+                                                    <span className="material-symbols-outlined text-[20px]">visibility</span>
+                                                </Link>
+                                                <a
+                                                    href={downloadUrl || "#"}
+                                                    onClick={(e) => handleDownloadClick(e, downloadUrl)}
+                                                    download={!!downloadUrl}
+                                                    className={`size-9 flex items-center justify-center text-slate-400 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 hover:text-white hover:bg-green-600 dark:hover:bg-green-600 rounded-lg transition-colors border border-transparent hover:border-green-600 ${!downloadUrl ? 'opacity-50 cursor-pointer' : ''}`}
+                                                    title={downloadUrl ? "Download .XLSX" : "No file available (Tampilkan pesan)"}
+                                                >
+                                                    <span className="material-symbols-outlined text-[20px]">download</span>
+                                                </a>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <Link
-                                                href={`/dashboard/excel/${sensor.id}?type=kwh`}
-                                                className="size-9 flex items-center justify-center text-slate-400 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 hover:text-white hover:bg-primary dark:hover:bg-primary rounded-lg transition-colors border border-transparent hover:border-primary"
-                                                title="Preview Data"
-                                            >
-                                                <span className="material-symbols-outlined text-[20px]">visibility</span>
-                                            </Link>
-                                            <a
-                                                href={getSensorDownloadUrl(sensor)}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="size-9 flex items-center justify-center text-slate-400 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 hover:text-white hover:bg-green-600 dark:hover:bg-green-600 rounded-lg transition-colors border border-transparent hover:border-green-600"
-                                                title="Download .XLSX"
-                                            >
-                                                <span className="material-symbols-outlined text-[20px]">download</span>
-                                            </a>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         ) : (
                             <div className="p-6 text-center text-sm text-slate-500 dark:text-slate-400">

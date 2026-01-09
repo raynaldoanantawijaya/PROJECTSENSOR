@@ -9,7 +9,55 @@ interface CreateUserResult {
     error?: string;
 }
 
+// Helper to verify session and role
+async function verifyAdminSession() {
+    const sessionCookie = (await cookies()).get("session")?.value;
+    if (!sessionCookie) return null;
+
+    try {
+        const auth = getAdminAuth();
+        // Verify session cookie
+        const decodedClaims = await auth.verifySessionCookie(sessionCookie, true);
+        const uid = decodedClaims.uid;
+
+        // Check Firestore Role
+        const db = getAdminFirestore();
+        const userDoc = await db.collection("users").doc(uid).get();
+
+        if (!userDoc.exists) return null;
+
+        const userData = userDoc.data();
+        const role = (userData?.role || "").toLowerCase();
+
+        if (role === 'admin' || role === 'commander') {
+            return {
+                uid,
+                role,
+                email: userData?.email,
+                subRole: userData?.subRole,
+                canEdit: userData?.permissions?.canEdit
+            };
+        }
+        return null;
+    } catch (error) {
+        return null;
+    }
+}
+
+const COMMANDER_EMAIL = process.env.NEXT_PUBLIC_COMMANDER_EMAIL || "anantawijaya212@gmail.com";
+
 export async function createUserAction(email: string, password: string, displayName: string): Promise<CreateUserResult> {
+    const caller = await verifyAdminSession();
+    if (!caller) {
+        return { success: false, error: "Unauthorized: Invalid or expired session." };
+    }
+
+    // Permission Check
+    const isCommander = caller.email?.toLowerCase() === COMMANDER_EMAIL.toLowerCase();
+    if (!isCommander && !caller.canEdit) {
+        return { success: false, error: "Unauthorized: You do not have permission to create users." };
+    }
+
     try {
         const auth = getAdminAuth();
         const userRecord = await auth.createUser({
@@ -27,10 +75,58 @@ export async function createUserAction(email: string, password: string, displayN
     }
 }
 
-export async function deleteUserAction(uid: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteUserAction(targetUid: string): Promise<{ success: boolean; error?: string }> {
+    const caller = await verifyAdminSession();
+    if (!caller) {
+        return { success: false, error: "Unauthorized: Invalid or expired session." };
+    }
+
+    const isCallerCommander = caller.email?.toLowerCase() === COMMANDER_EMAIL.toLowerCase();
+
+    // Permission Check
+    if (!isCallerCommander && !caller.canEdit) {
+        return { success: false, error: "Unauthorized: You do not have permission to delete users." };
+    }
+
     try {
+        const db = getAdminFirestore();
         const auth = getAdminAuth();
-        await auth.deleteUser(uid);
+
+        // Fetch Target User to check protections
+        const targetDoc = await db.collection("users").doc(targetUid).get();
+        if (!targetDoc.exists) {
+            // If not in DB but in Auth? Edge case, but let's assume we need DB data for check
+            // If strictly auth delete, proceed with caution. But here we enforce logic.
+            // Let's try to get auth user to check email at least
+            try {
+                const targetAuth = await auth.getUser(targetUid);
+                if (targetAuth.email?.toLowerCase() === COMMANDER_EMAIL.toLowerCase()) {
+                    return { success: false, error: "Cannot delete Commander." };
+                }
+            } catch (e) {
+                // User might not exist
+            }
+        } else {
+            const targetData = targetDoc.data();
+            const targetEmail = (targetData?.email || "").toLowerCase();
+
+            // 1. Protect Commander
+            if (targetEmail === COMMANDER_EMAIL.toLowerCase()) {
+                return { success: false, error: "Cannot delete Commander." };
+            }
+
+            // 2. Protect Admins
+            if (targetData?.role === 'admin' && !isCallerCommander) {
+                return { success: false, error: "Access Denied: You cannot delete another Administrator." };
+            }
+
+            // 3. Protect 'All' SubRole
+            if (targetData?.subRole === 'all' && caller.subRole !== 'all' && !isCallerCommander) {
+                return { success: false, error: "Access Denied: You cannot delete an All-Access User." };
+            }
+        }
+
+        await auth.deleteUser(targetUid);
         return { success: true };
     } catch (error: any) {
         console.error("Error deleting user:", error);
@@ -55,7 +151,8 @@ export async function loginAdminAction(idToken: string): Promise<{ success: bool
         }
 
         const userData = userDoc.data();
-        if (userData?.role !== 'admin') {
+        const role = (userData?.role || "").toLowerCase();
+        if (role !== 'admin' && role !== 'commander') {
             return { success: false, error: "Access Denied: You are not an admin." };
         }
 

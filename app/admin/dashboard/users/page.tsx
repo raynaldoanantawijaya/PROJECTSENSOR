@@ -2,9 +2,16 @@
 
 import React, { useEffect, useState } from 'react';
 import { storageService, User } from '@/lib/storage';
+import { authService } from '@/lib/auth';
+
+const COMMANDER_EMAIL = process.env.NEXT_PUBLIC_COMMANDER_EMAIL || "anantawijaya212@gmail.com";
+const COMMANDER_NAME = process.env.NEXT_PUBLIC_COMMANDER_NAME || "RAYNALDO ANANTA WIJAYA";
 
 export default function AdminUsersPage() {
     const [users, setUsers] = useState<User[]>([]);
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    // Add simpler state for immediate email check
+    const [currentEmail, setCurrentEmail] = useState<string>("");
     const [showAddForm, setShowAddForm] = useState(false);
     const [newUser, setNewUser] = useState<Partial<User> & { password?: string }>({
         username: '',
@@ -15,22 +22,76 @@ export default function AdminUsersPage() {
     });
 
     useEffect(() => {
-        const loadUsers = async () => {
+        const loadData = async () => {
             await storageService.init();
-            setUsers(await storageService.getUsers());
+            const allFetchedUsers = await storageService.getUsers();
+
+            // 1. Get Current User from Firebase Auth Source of Truth
+            const unsubscribe = authService.onAuthStateChanged(async (firebaseUser) => {
+                const emailFromAuth = firebaseUser?.email || "";
+                setCurrentEmail(emailFromAuth);
+
+                if (emailFromAuth) {
+                    const foundUser = allFetchedUsers.find(u =>
+                        u.email.toLowerCase().trim() === emailFromAuth.toLowerCase().trim()
+                    );
+                    // If found in DB use it, otherwise mock one from Auth (for fresh commander setup)
+                    setCurrentUser(foundUser || {
+                        id: firebaseUser!.uid,
+                        username: firebaseUser!.displayName || 'Admin',
+                        email: emailFromAuth,
+                        role: 'admin',
+                        permissions: { viewSpeed: true, viewSack: true, viewKwh: true, canEdit: true }
+                    });
+                }
+            });
+
+            // 2. Sort users
+            allFetchedUsers.sort((a, b) => {
+                const cmdEmail = COMMANDER_EMAIL.toLowerCase();
+                const aEmail = (a.email || "").toLowerCase();
+                const bEmail = (b.email || "").toLowerCase();
+
+                if (aEmail === cmdEmail) return -1;
+                if (bEmail === cmdEmail) return 1;
+                if (a.role === 'admin' && b.role !== 'admin') return -1;
+                if (b.role === 'admin' && a.role !== 'admin') return 1;
+                return a.username.localeCompare(b.username);
+            });
+            setUsers(allFetchedUsers);
+
+            return () => unsubscribe();
         };
-        loadUsers();
+        loadData();
     }, []);
 
+    // Derived state for Commander Access
+    // We check BOTH the full user object AND the raw email state to be absolutely sure
+    const isCommanderLoggedIn =
+        (currentUser?.email?.toLowerCase().trim() === COMMANDER_EMAIL.toLowerCase().trim()) ||
+        (currentEmail.toLowerCase().trim() === COMMANDER_EMAIL.toLowerCase().trim());
+
+    // Permission Check
+    const hasEditPermission = isCommanderLoggedIn || (currentUser?.permissions?.canEdit === true) || (currentUser?.subRole === 'all');
+
     const handleAddUser = async () => {
+        if (!hasEditPermission) {
+            alert("Access Denied: You do not have permission to create users.");
+            return;
+        }
+
         if (!newUser.username || !newUser.email || !newUser.password) {
             alert("Name, Email, and Password are required");
             return;
         }
 
+        // Security check
+        if (newUser.role === 'admin' && !isCommanderLoggedIn) {
+            alert("Only the Commander can create new Administrators.");
+            return;
+        }
+
         try {
-            // 1. Create in Firebase Auth (Server Action)
-            // Note: This requires FIREBASE_SERVICE_ACCOUNT_KEY env var to be set!
             const { createUserAction } = await import('@/app/actions/auth-actions');
             const result = await createUserAction(newUser.email, newUser.password, newUser.username);
 
@@ -39,17 +100,48 @@ export default function AdminUsersPage() {
                 return;
             }
 
-            // 2. Save to Firestore (Client SDK) with the real UID
+            // INHERITANCE LOGIC
+            let finalPermissions = newUser.permissions!;
+            let finalSubRole = newUser.subRole;
+
+            // If creator is NOT Commander and has a specific sub-role, enforce inheritance
+            if (!isCommanderLoggedIn && currentUser?.subRole && currentUser.subRole !== 'all') {
+                finalSubRole = currentUser.subRole;
+                // Lock permissions to only their department
+                finalPermissions = {
+                    viewSpeed: currentUser.subRole === 'printing',
+                    viewSack: currentUser.subRole === 'sylum',
+                    viewKwh: currentUser.subRole === 'listrik',
+                    canEdit: false
+                };
+            }
+
             const user: User = {
-                id: result.uid!, // Use the real UID from Auth
+                id: result.uid!,
                 username: newUser.username!,
                 email: newUser.email!,
                 role: newUser.role as 'admin' | 'user',
-                permissions: newUser.permissions!
+                permissions: finalPermissions
             };
 
+            if (finalSubRole) {
+                user.subRole = finalSubRole;
+            }
+
             await storageService.saveUser(user);
-            setUsers(await storageService.getUsers());
+
+            // Reload
+            const updatedUsers = await storageService.getUsers();
+            updatedUsers.sort((a, b) => {
+                const cmdEmail = COMMANDER_EMAIL.toLowerCase();
+                if (a.email.toLowerCase() === cmdEmail) return -1;
+                if (b.email.toLowerCase() === cmdEmail) return 1;
+                if (a.role === 'admin' && b.role !== 'admin') return -1;
+                if (b.role === 'admin' && a.role !== 'admin') return 1;
+                return a.username.localeCompare(b.username);
+            });
+            setUsers(updatedUsers);
+
             setShowAddForm(false);
             setNewUser({
                 username: '',
@@ -65,21 +157,53 @@ export default function AdminUsersPage() {
         }
     };
 
-    const handleDeleteUser = async (id: string) => {
-        if (confirm("Are you sure you want to revoke access for this user? This action cannot be undone.")) {
+    const handleDeleteUser = async (targetUser: User) => {
+        if (!hasEditPermission) {
+            alert("Access Denied: You do not have permission to delete users.");
+            return;
+        }
+
+        if (targetUser.email.toLowerCase() === COMMANDER_EMAIL.toLowerCase()) {
+            alert("Cannot delete the Commander.");
+            return;
+        }
+
+        if (targetUser.role === 'admin' && !isCommanderLoggedIn) {
+            alert("Access Denied: You cannot delete another Administrator.");
+            return;
+        }
+
+        // Sub-Role Protection: Only 'All' Admin or Commander can delete 'All' SubRole users
+        if (targetUser.subRole === 'all' && currentUser?.subRole !== 'all' && !isCommanderLoggedIn) {
+            alert("Access Denied: users with 'All Access' (Sub-Role All) can only be managed by All-Access Admins or Commander.");
+            return;
+        }
+
+        if (confirm(`Are you sure you want to delete user ${targetUser.username}? This cannot be undone.`)) {
             try {
-                // 1. Delete from Firebase Auth (Server Action)
                 const { deleteUserAction } = await import('@/app/actions/auth-actions');
-                const result = await deleteUserAction(id);
+                const result = await deleteUserAction(targetUser.id);
 
                 if (!result.success) {
                     console.error("Failed to delete from Auth:", result.error);
                     alert("Warning: Could not delete user from Authentication provider. " + result.error);
                 }
 
-                // 2. Delete from Firestore/Storage
-                await storageService.deleteUser(id);
-                setUsers(await storageService.getUsers());
+                await storageService.deleteUser(targetUser.id);
+
+                // Refresh list
+                const freshUsers = await storageService.getUsers();
+                // Apply sort again
+                freshUsers.sort((a, b) => {
+                    const cmdEmail = COMMANDER_EMAIL.toLowerCase();
+                    if (a.email.toLowerCase() === cmdEmail) return -1;
+                    if (b.email.toLowerCase() === cmdEmail) return 1;
+                    if (a.role === 'admin' && b.role !== 'admin') return -1;
+                    if (b.role === 'admin' && a.role !== 'admin') return 1;
+                    return a.username.localeCompare(b.username);
+                });
+                setUsers(freshUsers);
+
             } catch (e) {
                 console.error("Delete failed:", e);
                 alert("Failed to delete user completely.");
@@ -87,19 +211,85 @@ export default function AdminUsersPage() {
         }
     };
 
-    const handlePermissionChange = async (user: User, key: keyof User['permissions']) => {
+    const handleRoleChange = async (targetUser: User, newRole: string) => {
+        if (!isCommanderLoggedIn) return; // Guard
+        if (targetUser.email.toLowerCase() === COMMANDER_EMAIL.toLowerCase()) return; // Guard Commander
+
+        try {
+            const updatedUser = { ...targetUser, role: newRole as 'admin' | 'user' };
+            await storageService.saveUser(updatedUser);
+            // Optimistic update
+            setUsers(prev => prev.map(u => u.id === targetUser.id ? updatedUser : u));
+        } catch (e) {
+            console.error(e);
+            alert("Failed to update role");
+        }
+    };
+
+    const handleSubRoleChange = async (targetUser: User, newSubRole: string) => {
+        if (!isCommanderLoggedIn) return; // Only Commander
+        if (targetUser.email.toLowerCase() === COMMANDER_EMAIL.toLowerCase()) return;
+
+        try {
+            const updatedUser: User = {
+                ...targetUser,
+                subRole: newSubRole as any
+            };
+            await storageService.saveUser(updatedUser);
+            setUsers(prev => prev.map(u => u.id === targetUser.id ? updatedUser : u));
+        } catch (e) {
+            console.error(e);
+            alert("Failed to update sub-role");
+        }
+    };
+
+    const handlePermissionChange = async (targetUser: User, key: keyof User['permissions']) => {
+        if (targetUser.email.toLowerCase() === COMMANDER_EMAIL.toLowerCase()) return;
+
+        // General edit check
+        if (!hasEditPermission) {
+            alert("Access Denied: You do not have permission to modify users.");
+            return;
+        }
+
+        if (targetUser.role === 'admin' && !isCommanderLoggedIn) {
+            alert("Access Denied: You cannot modify permissions of another Administrator.");
+            return;
+        }
+
+        // Sub-Role Protection: Only 'All' Admin or Commander can delete 'All' SubRole users
+        if (targetUser.subRole === 'all' && currentUser?.subRole !== 'all' && !isCommanderLoggedIn) {
+            alert("Access Denied: users with 'All Access' (Sub-Role All) can only be managed by All-Access Admins or Commander.");
+            return;
+        }
+
+        // Sub-Role Permission Guards
+        const mySubRole = currentUser?.subRole;
+        if (mySubRole && mySubRole !== 'all') {
+            if (mySubRole === 'printing' && key !== 'viewSpeed') {
+                alert("Access Denied: Printing Admin can only manage Speed Sensors.");
+                return;
+            }
+            if (mySubRole === 'sylum' && key !== 'viewSack') {
+                alert("Access Denied: Sylum Admin can only manage Sack Sensors.");
+                return;
+            }
+            if (mySubRole === 'listrik' && key !== 'viewKwh') {
+                alert("Access Denied: Listrik Admin can only manage KWH Sensors.");
+                return;
+            }
+        }
+
         const updatedUser = {
-            ...user,
+            ...targetUser,
             permissions: {
-                ...user.permissions,
-                [key]: !user.permissions[key]
+                ...targetUser.permissions,
+                [key]: !targetUser.permissions[key]
             }
         };
         await storageService.saveUser(updatedUser);
-        setUsers(await storageService.getUsers());
+        setUsers(users.map(u => u.id === targetUser.id ? updatedUser : u));
     };
-
-    // Password reset removed - managed by Firebase Auth
 
     return (
         <>
@@ -147,12 +337,13 @@ export default function AdminUsersPage() {
                                     onChange={e => setNewUser({ ...newUser, password: e.target.value })}
                                 />
                                 <select
-                                    className="bg-[#111722] border border-[#3b4b68] text-white rounded px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                                    className="bg-[#111722] border border-[#3b4b68] text-white rounded px-3 py-2 text-sm focus:border-primary focus:outline-none disabled:opacity-50"
                                     value={newUser.role}
                                     onChange={e => setNewUser({ ...newUser, role: e.target.value as 'user' | 'admin' })}
+                                    disabled={!isCommanderLoggedIn}
                                 >
                                     <option value="user">User</option>
-                                    <option value="admin">Admin</option>
+                                    {isCommanderLoggedIn && <option value="admin">Admin</option>}
                                 </select>
                             </div>
                             <div className="flex justify-end">
@@ -183,73 +374,189 @@ export default function AdminUsersPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/5">
-                                    {users.map((user) => (
-                                        <tr key={user.id} className="group hover:bg-white/[0.02] transition-colors">
-                                            <td className="p-5 align-top">
-                                                <div className="flex items-center gap-4">
-                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm border bg-slate-500/20 text-slate-400 border-slate-500/20`}>
-                                                        {user.username.substring(0, 2).toUpperCase()}
+                                    {users.map((targetUser) => {
+                                        const isCommanderTarget = targetUser.email.toLowerCase().trim() === COMMANDER_EMAIL.toLowerCase().trim();
+                                        const displayName = isCommanderTarget ? COMMANDER_NAME : targetUser.username;
+                                        const displayRole = isCommanderTarget ? "COMMANDER" : targetUser.role;
+
+                                        // Permission Logic
+                                        const isTargetAdmin = targetUser.role === 'admin';
+
+                                        // Update canModify Logic here
+                                        const isTargetAllAccess = targetUser.subRole === 'all';
+                                        const isMeAllAccess = currentUser?.subRole === 'all';
+
+                                        let canModify = false;
+                                        if (isCommanderLoggedIn) {
+                                            canModify = !isCommanderTarget;
+                                        } else if (isTargetAdmin) {
+                                            canModify = false;
+                                        } else {
+                                            // Normal Check + Sub Role Protection
+                                            if (isTargetAllAccess && !isMeAllAccess) {
+                                                canModify = false; // Protected Target
+                                            } else {
+                                                canModify = hasEditPermission;
+                                            }
+                                        }
+
+
+                                        // Scope Permission Checks
+                                        const mySub = currentUser?.subRole;
+                                        const canTouchSpeed = !mySub || mySub === 'all' || mySub === 'printing';
+                                        const canTouchSack = !mySub || mySub === 'all' || mySub === 'sylum';
+                                        const canTouchKwh = !mySub || mySub === 'all' || mySub === 'listrik';
+
+
+                                        // Role Color Logic
+                                        let roleColorClass = "bg-blue-400/10 text-blue-400 ring-blue-400/20";
+                                        if (isCommanderTarget) roleColorClass = "bg-amber-400/10 text-amber-400 ring-amber-400/20";
+                                        else if (targetUser.role === 'admin') roleColorClass = "bg-purple-400/10 text-purple-400 ring-purple-400/20";
+
+                                        return (
+                                            <tr key={targetUser.id} className={`group transition-colors ${isCommanderTarget ? 'bg-amber-500/5 hover:bg-amber-500/10' : 'hover:bg-white/[0.02]'}`}>
+                                                <td className="p-5 align-top">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm border 
+                                                            ${isCommanderTarget
+                                                                ? 'bg-amber-500/20 text-amber-500 border-amber-500/20'
+                                                                : 'bg-slate-500/20 text-slate-400 border-slate-500/20'}`}>
+                                                            {displayName.substring(0, 2).toUpperCase()}
+                                                        </div>
+                                                        <div>
+                                                            <p className={`font-medium text-sm ${isCommanderTarget ? 'text-amber-400' : 'text-white'}`}>{displayName}</p>
+                                                            <p className="text-[#92a4c9] text-xs">{targetUser.email}</p>
+
+                                                            <div className="mt-1 flex flex-col gap-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${roleColorClass}`}>
+                                                                        <span className="uppercase">{displayRole}</span>
+                                                                    </span>
+
+                                                                    {/* COMMANDER ONLY: Change Role */}
+                                                                    {isCommanderLoggedIn && !isCommanderTarget && (
+                                                                        <select
+                                                                            className="bg-[#111722] text-[#92a4c9] text-[10px] border border-white/10 rounded px-1 py-0.5 focus:outline-none focus:border-primary cursor-pointer hover:bg-[#1a2336] transition-colors"
+                                                                            value={targetUser.role}
+                                                                            onChange={(e) => handleRoleChange(targetUser, e.target.value)}
+                                                                        >
+                                                                            <option value="user">User</option>
+                                                                            <option value="admin">Admin</option>
+                                                                        </select>
+                                                                    )}
+                                                                </div>
+
+                                                                {/* SUB ROLE DISPLAY / EDIT */}
+                                                                {!isCommanderTarget && (
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-[10px] text-[#92a4c9] uppercase tracking-wider font-semibold">
+                                                                            {targetUser.subRole ? targetUser.subRole : 'No Role'}
+                                                                        </span>
+                                                                        {isCommanderLoggedIn && (
+                                                                            <select
+                                                                                className="bg-[#111722] text-amber-400 text-[10px] border border-amber-500/20 rounded px-1 py-0.5 focus:outline-none focus:border-amber-500 cursor-pointer hover:bg-[#1a2336]"
+                                                                                value={targetUser.subRole || ''}
+                                                                                onChange={(e) => handleSubRoleChange(targetUser, e.target.value)}
+                                                                            >
+                                                                                <option value="">No Sub-Role</option>
+                                                                                <option value="printing">Printing (Speed)</option>
+                                                                                <option value="sylum">Sylum (Sack)</option>
+                                                                                <option value="listrik">Listrik (KWH)</option>
+                                                                                <option value="all">All Access</option>
+                                                                            </select>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <p className="text-white font-medium text-sm">{user.username}</p>
-                                                        <p className="text-[#92a4c9] text-xs">{user.email}</p>
-                                                        <span className={`inline-flex mt-1 items-center rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${user.role === 'admin' ? 'bg-purple-400/10 text-purple-400 ring-purple-400/20' : 'bg-blue-400/10 text-blue-400 ring-blue-400/20'}`}>
-                                                            {user.role}
-                                                        </span>
+                                                </td>
+                                                <td className="p-5 align-top">
+                                                    <div className={`bg-[#111722]/50 rounded-lg p-3 border border-white/5`}>
+                                                        <p className="text-xs text-[#92a4c9] mb-3 uppercase font-semibold">Allowed Sensors:</p>
+                                                        {isCommanderTarget ? (
+                                                            <div className="flex items-center justify-center py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                                                                <span className="material-symbols-outlined text-amber-500 mr-2 text-[18px]">verified_user</span>
+                                                                <span className="text-amber-500 font-bold text-xs tracking-widest uppercase">FULL ACCESS SYSTEM</span>
+                                                            </div>
+                                                        ) : (
+                                                            <div className={`grid grid-cols-2 gap-3 ${!canModify ? 'opacity-50 pointer-events-none' : ''}`}>
+                                                                <label className={`flex items-center space-x-2 cursor-pointer group/chk ${!canTouchSpeed ? 'opacity-30 pointer-events-none' : ''}`}>
+                                                                    <input
+                                                                        checked={targetUser.permissions.viewSpeed}
+                                                                        onChange={() => handlePermissionChange(targetUser, 'viewSpeed')}
+                                                                        className="custom-checkbox"
+                                                                        type="checkbox"
+                                                                        disabled={!canModify || !canTouchSpeed}
+                                                                    />
+                                                                    <span className="text-sm text-gray-300 group-hover/chk:text-white transition-colors">Sensor Kecepatan</span>
+                                                                </label>
+                                                                <label className={`flex items-center space-x-2 cursor-pointer group/chk ${!canTouchSack ? 'opacity-30 pointer-events-none' : ''}`}>
+                                                                    <input
+                                                                        checked={targetUser.permissions.viewSack}
+                                                                        onChange={() => handlePermissionChange(targetUser, 'viewSack')}
+                                                                        className="custom-checkbox"
+                                                                        type="checkbox"
+                                                                        disabled={!canModify || !canTouchSack}
+                                                                    />
+                                                                    <span className="text-sm text-gray-300 group-hover/chk:text-white transition-colors">Sensor Karung</span>
+                                                                </label>
+                                                                <label className={`flex items-center space-x-2 cursor-pointer group/chk ${!canTouchKwh ? 'opacity-30 pointer-events-none' : ''}`}>
+                                                                    <input
+                                                                        checked={targetUser.permissions.viewKwh}
+                                                                        onChange={() => handlePermissionChange(targetUser, 'viewKwh')}
+                                                                        className="custom-checkbox"
+                                                                        type="checkbox"
+                                                                        disabled={!canModify || !canTouchKwh}
+                                                                    />
+                                                                    <span className="text-sm text-gray-300 group-hover/chk:text-white transition-colors">Sensor KWH</span>
+                                                                </label>
+
+                                                                {/* SPECIAL: Edit Permission - ONLY COMMANDER CAN CHANGE */}
+                                                                <label className={`flex items-center space-x-2 cursor-pointer group/chk ${!isCommanderLoggedIn ? 'opacity-50 pointer-events-none' : ''}`}>
+                                                                    <input
+                                                                        checked={targetUser.permissions.canEdit}
+                                                                        onChange={() => isCommanderLoggedIn && handlePermissionChange(targetUser, 'canEdit')}
+                                                                        className="custom-checkbox !accent-amber-500"
+                                                                        type="checkbox"
+                                                                        disabled={!isCommanderLoggedIn}
+                                                                    />
+                                                                    <span className={`text-sm transition-colors ${targetUser.permissions.canEdit ? 'text-amber-400 font-medium' : 'text-gray-300'}`}>
+                                                                        Izin Edit
+                                                                    </span>
+                                                                    {!isCommanderLoggedIn && <span className="material-symbols-outlined text-[10px] text-gray-500">lock</span>}
+                                                                </label>
+                                                            </div>
+                                                        )}
+                                                        {!canModify && !isCommanderTarget && (
+                                                            <p className="text-[10px] text-red-400 mt-2 italic flex items-center gap-1">
+                                                                <span className="material-symbols-outlined text-[12px]">lock</span>
+                                                                Admin access protected
+                                                            </p>
+                                                        )}
                                                     </div>
-                                                </div>
-                                            </td>
-                                            <td className="p-5 align-top">
-                                                <div className={`bg-[#111722]/50 rounded-lg p-3 border border-white/5`}>
-                                                    <p className="text-xs text-[#92a4c9] mb-3 uppercase font-semibold">Allowed Sensors:</p>
-                                                    <div className="grid grid-cols-2 gap-3">
-                                                        <label className="flex items-center space-x-2 cursor-pointer group/chk">
-                                                            <input
-                                                                checked={user.permissions.viewSpeed}
-                                                                onChange={() => handlePermissionChange(user, 'viewSpeed')}
-                                                                className="custom-checkbox"
-                                                                type="checkbox"
-                                                            />
-                                                            <span className="text-sm text-gray-300 group-hover/chk:text-white transition-colors">Sensor Kecepatan</span>
-                                                        </label>
-                                                        <label className="flex items-center space-x-2 cursor-pointer group/chk">
-                                                            <input
-                                                                checked={user.permissions.viewSack}
-                                                                onChange={() => handlePermissionChange(user, 'viewSack')}
-                                                                className="custom-checkbox"
-                                                                type="checkbox"
-                                                            />
-                                                            <span className="text-sm text-gray-300 group-hover/chk:text-white transition-colors">Sensor Karung</span>
-                                                        </label>
-                                                        <label className="flex items-center space-x-2 cursor-pointer group/chk">
-                                                            <input
-                                                                checked={user.permissions.viewKwh}
-                                                                onChange={() => handlePermissionChange(user, 'viewKwh')}
-                                                                className="custom-checkbox"
-                                                                type="checkbox"
-                                                            />
-                                                            <span className="text-sm text-gray-300 group-hover/chk:text-white transition-colors">Sensor KWH</span>
-                                                        </label>
+                                                </td>
+                                                <td className="p-5 align-top text-right">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        {canModify && (
+                                                            <button
+                                                                onClick={() => handleDeleteUser(targetUser)}
+                                                                className="p-2 hover:bg-red-500/20 text-[#92a4c9] hover:text-red-500 rounded-lg transition-colors" title="Delete User"
+                                                            >
+                                                                <span className="material-symbols-outlined text-[20px]">delete</span>
+                                                            </button>
+                                                        )}
                                                     </div>
-                                                </div>
-                                            </td>
-                                            <td className="p-5 align-top text-right">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    <button
-                                                        onClick={() => handleDeleteUser(user.id)}
-                                                        className="p-2 hover:bg-red-500/20 text-[#92a4c9] hover:text-red-500 rounded-lg transition-colors" title="Delete User"
-                                                    >
-                                                        <span className="material-symbols-outlined text-[20px]">delete</span>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
+
                 <div className="h-10"></div>
             </main>
         </>

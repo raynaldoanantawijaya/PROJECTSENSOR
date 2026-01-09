@@ -5,86 +5,144 @@ import { useEffect, useState } from "react";
 import { storageService, Sensor } from "@/lib/storage";
 import { useSmartSensorData } from "@/lib/smart-sensor";
 
-const getStatusParams = (status: Sensor['status']) => {
-    switch (status) {
-        case 'active':
-            return {
-                style: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-                dot: "bg-emerald-500",
-                text: "Active",
-                icon: "check_circle",
-                iconColor: "text-emerald-500"
-            };
-        case 'maintenance':
-            return {
-                style: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-                dot: "bg-amber-500",
-                text: "Maintenance",
-                icon: "build",
-                iconColor: "text-amber-500"
-            };
-        default:
-            return {
-                style: "bg-rose-500/10 text-rose-400 border-rose-500/20",
-                dot: "bg-rose-500",
-                text: "Inactive",
-                icon: "error",
-                iconColor: "text-rose-500"
-            };
+const VARIANTS = {
+    active: {
+        color: "emerald",
+        badgeBg: "bg-emerald-500/10",
+        badgeBorder: "border-emerald-500/20",
+        badgeText: "text-emerald-400",
+        dot: "bg-emerald-400",
+        label: "Online",
+        statusText: "Normal",
+        statusIcon: "check_circle",
+        mainColor: "#10b981",
+        grad: "gradGreenA",
+        chartPathFill: "M0,70 Q75,60 150,50 T300,30 V100 H0 Z",
+        chartPathStroke: "M0,70 Q75,60 150,50 T300,30"
+    },
+    warning: {
+        color: "amber",
+        badgeBg: "bg-amber-500/10",
+        badgeBorder: "border-amber-500/20",
+        badgeText: "text-amber-400",
+        dot: "bg-amber-400",
+        label: "Warning",
+        statusText: "Low Voltage",
+        statusIcon: "warning",
+        mainColor: "#f59e0b",
+        grad: "gradAmberB",
+        chartPathFill: "M0,60 Q25,40 50,55 T100,60 T150,45 T200,65 T250,50 T300,55 V100 H0 Z",
+        chartPathStroke: "M0,60 Q25,40 50,55 T100,60 T150,45 T200,65 T250,50 T300,55"
+    },
+    stable: {
+        color: "cyan",
+        badgeBg: "bg-cyan-500/10",
+        badgeBorder: "border-cyan-500/20",
+        badgeText: "text-cyan-400",
+        dot: "bg-cyan-400",
+        label: "Stable",
+        statusText: "High Load",
+        statusIcon: "trending_up",
+        mainColor: "#06b6d4",
+        grad: "gradCyanC",
+        chartPathFill: "M0,55 Q50,53 100,56 T200,54 T300,55 V100 H0 Z",
+        chartPathStroke: "M0,55 Q50,53 100,56 T200,54 T300,55"
     }
 };
 
-const KwhSensorCard = ({ sensor, isVisible }: { sensor: Sensor; isVisible: boolean }) => {
-    // USE SMART PROXY: Fetches via API, Cached on Server, Updates every 5s
+const KwhSensorCard = ({ sensor, index, isVisible }: { sensor: Sensor; index: number; isVisible: boolean }) => {
+    // USE SMART PROXY
     const { speed: power } = useSmartSensorData(sensor, isVisible, 5000);
-    const statusStyle = getStatusParams(sensor.status);
+
+    // Derived metrics for display
+    const voltage = index === 1 ? 218.0 : index === 2 ? 222.1 : 224.5; // Simulate variation
+    const current = (power / voltage) * 10; // Fake calculation for demo scale
+
+    // Cycle variants
+    let variant = VARIANTS.active;
+    if (index === 1) variant = VARIANTS.warning;
+    if (index === 2) variant = VARIANTS.stable;
+    if (index > 2 && sensor.status === 'active') variant = VARIANTS.active;
+    if (sensor.status === 'inactive') variant = VARIANTS.warning;
 
     return (
-        <Link href={`/dashboard/kwh/${sensor.id}`} className="group relative flex flex-col bg-[#1a2332] border border-[#324467] rounded-xl overflow-hidden hover:border-[#4b628b] transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-[#135bec]/10">
-            {/* Top accent line */}
-            <div className={`absolute top-0 left-0 w-full h-1 ${sensor.status === 'active' ? 'bg-gradient-to-r from-emerald-500 to-cyan-500' : 'bg-gray-700'}`}></div>
-
-            <div className="p-5 flex flex-col h-full gap-4">
-                {/* Header */}
-                <div className="flex justify-between items-start">
+        <Link href={`/dashboard/kwh/${sensor.id}`} className="flex flex-col rounded-xl border border-[#324467] bg-[#1a2332] overflow-hidden hover:border-[#4b628b] transition-colors shadow-lg shadow-black/20 group">
+            <div className="p-6 flex flex-col gap-6">
+                <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                        <div className={`size-10 rounded-lg flex items-center justify-center bg-[#232f48] border border-[#324467] group-hover:border-[#135bec]/50 transition-colors`}>
-                            <span className="material-symbols-outlined text-yellow-400">bolt</span>
+                        <div className="size-10 rounded-full bg-[#135bec]/20 flex items-center justify-center text-[#135bec]">
+                            <span className="material-symbols-outlined">bolt</span>
                         </div>
                         <div>
-                            <h3 className="text-white font-semibold text-base group-hover:text-blue-400 transition-colors">{sensor.name}</h3>
-                            <span className="text-xs text-[#92a4c9] font-mono">{sensor.id}</span>
+                            <h3 className="text-white text-base font-semibold">{sensor.name}</h3>
+                            <p className="text-[#92a4c9] text-xs">ID: {sensor.id}</p>
                         </div>
                     </div>
-                    <div className={`px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${statusStyle.style}`}>
-                        <div className={`size-1.5 rounded-full ${statusStyle.dot} ${sensor.status === 'active' ? 'animate-pulse' : ''}`}></div>
-                        {statusStyle.text}
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${variant.badgeBg} border ${variant.badgeBorder} ${variant.badgeText} text-xs font-medium uppercase tracking-wide`}>
+                        <span className={`size-1.5 rounded-full ${variant.dot} ${sensor.status === 'active' ? 'animate-pulse' : ''}`}></span>
+                        {variant.label}
+                    </span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 pt-2">
+                    {/* Total Kwh */}
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-[#151c2a] border border-[#2d3a52]">
+                        <div>
+                            <p className="text-[#92a4c9] text-xs uppercase tracking-wider font-semibold">Total Kwh</p>
+                            <div className="flex items-baseline gap-1 mt-1">
+                                <span className="text-xl font-bold text-white">{power.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>
+                                <span className="text-[#92a4c9] text-xs">kWh</span>
+                            </div>
+                        </div>
+                        <span className="material-symbols-outlined text-[#135bec]" style={{ fontSize: "20px" }}>electric_bolt</span>
+                    </div>
+                    {/* Tegangan */}
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-[#151c2a] border border-[#2d3a52]">
+                        <div>
+                            <p className="text-[#92a4c9] text-xs uppercase tracking-wider font-semibold">Tegangan</p>
+                            <div className="flex items-baseline gap-1 mt-1">
+                                <span className="text-xl font-bold text-white">{voltage.toFixed(1)}</span>
+                                <span className="text-[#92a4c9] text-xs">V</span>
+                            </div>
+                        </div>
+                        <span className="material-symbols-outlined text-amber-500" style={{ fontSize: "20px" }}>electrical_services</span>
+                    </div>
+                    {/* Arus */}
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-[#151c2a] border border-[#2d3a52]">
+                        <div>
+                            <p className="text-[#92a4c9] text-xs uppercase tracking-wider font-semibold">Arus</p>
+                            <div className="flex items-baseline gap-1 mt-1">
+                                <span className="text-xl font-bold text-white">{Math.max(0, current).toFixed(1)}</span>
+                                <span className="text-[#92a4c9] text-xs">A</span>
+                            </div>
+                        </div>
+                        <span className="material-symbols-outlined text-cyan-500" style={{ fontSize: "20px" }}>electric_meter</span>
                     </div>
                 </div>
 
-                {/* Main Metric */}
-                <div className="mt-2 text-center py-4 bg-[#151c2a] rounded-lg border border-[#324467]/50 relative overflow-hidden">
-                    <div className="relative z-10 flex flex-col items-center justify-center gap-1">
-                        <span className="text-4xl font-bold text-white tracking-tighter">
-                            {power.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-                        </span>
-                        <span className="text-xs font-medium text-[#92a4c9] uppercase tracking-widest">{sensor.unit || 'kWh'}</span>
+                <div className="flex items-center gap-4 text-xs text-[#92a4c9] border-t border-[#324467] pt-4 mt-auto">
+                    <div className="flex items-center gap-1">
+                        <span className={`material-symbols-outlined text-${variant.color}-400`} style={{ fontSize: "16px" }}>{variant.statusIcon}</span>
+                        <span className={`text-${variant.color}-400 font-medium`}>{variant.statusText}</span>
                     </div>
-                    {/* Background Glow */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-blue-500/10 blur-2xl rounded-full opacity-50"></div>
+                    <div className="ml-auto">
+                        Updated {index === 0 ? '1m ago' : index === 1 ? '45s ago' : '10s ago'}
+                    </div>
                 </div>
+            </div>
 
-                {/* Footer Metrics */}
-                <div className="grid grid-cols-2 gap-2 mt-auto">
-                    <div className="bg-[#232f48]/50 p-2 rounded-lg border border-[#324467]/30 flex flex-col items-center">
-                        <span className="text-[10px] text-[#92a4c9] uppercase">Voltage</span>
-                        <span className="text-sm font-semibold text-white">220 V</span>
-                    </div>
-                    <div className="bg-[#232f48]/50 p-2 rounded-lg border border-[#324467]/30 flex flex-col items-center">
-                        <span className="text-[10px] text-[#92a4c9] uppercase">Current</span>
-                        <span className="text-sm font-semibold text-white">{(power / 220).toFixed(1)} A</span>
-                    </div>
-                </div>
+            {/* SVG Chart */}
+            <div className="h-16 w-full bg-[#151c2a] relative border-t border-[#2d3a52]">
+                <svg className="w-full h-full absolute bottom-0 left-0" preserveAspectRatio="none" viewBox="0 0 300 100">
+                    <defs>
+                        <linearGradient id={`${variant.grad}-${sensor.id}`} x1="0" x2="0" y1="0" y2="1">
+                            <stop offset="0%" stopColor={variant.mainColor} stopOpacity="0.2"></stop>
+                            <stop offset="100%" stopColor={variant.mainColor} stopOpacity="0"></stop>
+                        </linearGradient>
+                    </defs>
+                    <path d={variant.chartPathFill} fill={`url(#${variant.grad}-${sensor.id})`}></path>
+                    <path d={variant.chartPathStroke} fill="none" stroke={variant.mainColor} strokeWidth="2"></path>
+                </svg>
             </div>
         </Link>
     );
@@ -109,32 +167,29 @@ export default function KwhSensorPage() {
 
     return (
         <div className="max-w-[1400px]">
-            <div className="flex flex-col gap-4 mb-8">
+            <header className="flex flex-col gap-4 mb-4">
                 <div className="flex items-start justify-between">
                     <div className="flex flex-col gap-4">
-                        <div className="flex items-center gap-2 text-sm text-[#92a4c9]">
+                        <div className="flex items-center gap-2 text-[10px] md:text-sm text-[#92a4c9]">
                             <Link href="/dashboard" className="hover:text-white transition-colors font-medium">Dashboard</Link>
-                            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-                            <span className="text-white font-medium">Energy Monitor</span>
+                            <span className="material-symbols-outlined text-[#526079] text-sm">chevron_right</span>
+                            <span className="text-white font-medium">Sensor Kwh</span>
                         </div>
-                        <div>
-                            <h2 className="text-white text-3xl font-bold tracking-tight mb-1">Listrik & Energi</h2>
-                            <p className="text-[#92a4c9] text-sm">Monitoring konsumsi daya listrik mesin real-time</p>
+                        <div className="flex flex-col gap-1">
+                            <h2 className="text-white tracking-tight text-3xl font-bold">Sensor Kwh</h2>
+                            <p className="text-[#92a4c9] text-sm font-normal">Monitoring konsumsi listrik secara real-time</p>
                         </div>
                     </div>
                 </div>
-            </div>
+            </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {sensors.length > 0 ? (
-                    sensors.map((sensor) => (
-                        <KwhSensorCard key={sensor.id} sensor={sensor} isVisible={isVisible} />
+                    sensors.map((sensor, idx) => (
+                        <KwhSensorCard key={sensor.id} sensor={sensor} index={idx} isVisible={isVisible} />
                     ))
                 ) : (
-                    <div className="col-span-full py-12 text-center border-2 border-dashed border-[#324467] rounded-xl bg-[#1a2332]/50">
-                        <div className="inline-flex size-12 rounded-full bg-[#324467] items-center justify-center mb-4 text-[#92a4c9]">
-                            <span className="material-symbols-outlined">sensors_off</span>
-                        </div>
+                    <div className="col-span-full p-8 text-center border border-dashed border-gray-700 rounded-xl">
                         <p className="text-gray-400">Loading Sensors...</p>
                     </div>
                 )}

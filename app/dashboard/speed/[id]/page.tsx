@@ -161,7 +161,7 @@ export default function SpeedSensorDetail({ params }: { params: Promise<{ id: st
         <div className="flex flex-col gap-6 max-w-[1280px] mx-auto w-full">
             <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2 text-sm mb-2 text-[#92a4c9]">
+                    <div className="flex items-center gap-2 text-[10px] md:text-sm mb-2 text-[#92a4c9]">
                         <Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
                         <span className="material-symbols-outlined text-[10px]">chevron_right</span>
                         <Link href="/dashboard/speed" className="hover:text-white transition-colors">Sensor Kecepatan</Link>

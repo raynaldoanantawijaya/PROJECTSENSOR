@@ -85,46 +85,47 @@ export default function AdminLoginPage() {
         <div className="bg-slate-50 dark:bg-[#101622] font-display min-h-screen flex flex-col items-center justify-center p-4 relative">
             <Link
                 href="/"
-                className="absolute top-6 left-6 p-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 transition-colors flex items-center gap-2 group"
+                className="absolute top-4 left-4 md:top-6 md:left-6 p-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 transition-colors flex items-center gap-2 group z-20"
+                title="Back to Home"
             >
                 <span className="material-symbols-outlined group-hover:-translate-x-1 transition-transform">arrow_back</span>
-                <span className="text-sm font-medium">Back to User</span>
+                <span className="text-sm font-medium hidden sm:inline">Back to User</span>
             </Link>
 
             <div
-                className="fixed inset-0 z-0 opacity-20 pointer-events-none"
+                className="absolute inset-0 z-0 opacity-20 pointer-events-none overflow-hidden"
                 style={{ background: 'radial-gradient(circle at 50% 0%, #135bec 0%, transparent 60%)' }}
             ></div>
 
-            <div className="relative z-10 w-full max-w-[480px]">
-                <div className="flex flex-col items-center mb-8 text-center">
-                    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20 shadow-lg shadow-primary/10">
-                        <span className="material-symbols-outlined text-4xl">admin_panel_settings</span>
+            <div className="relative z-10 w-full max-w-[420px] md:max-w-[480px]">
+                <div className="flex flex-col items-center mb-6 md:mb-8 text-center">
+                    <div className="mb-4 flex h-14 w-14 md:h-16 md:w-16 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20 shadow-lg shadow-primary/10">
+                        <span className="material-symbols-outlined text-3xl md:text-4xl">admin_panel_settings</span>
                     </div>
-                    <h1 className="text-3xl font-black tracking-tight text-[#111418] dark:text-white mb-2">Khusus Admin</h1>
+                    <h1 className="text-2xl md:text-3xl font-black tracking-tight text-[#111418] dark:text-white mb-2">Admin</h1>
                     <div className="flex items-center gap-2">
                         <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse"></span>
-                        <p className="text-base font-medium text-slate-500 dark:text-[#92a4c9]">Admin Access Portal</p>
+                        <p className="text-sm md:text-base font-medium text-slate-500 dark:text-[#92a4c9]">Admin Access Portal</p>
                     </div>
                 </div>
 
                 <div className="flex flex-col rounded-xl bg-white dark:bg-[#192233] shadow-2xl border border-slate-200 dark:border-[#324467] overflow-hidden">
                     <div className="h-1.5 w-full bg-primary"></div>
-                    <div className="p-8 flex flex-col gap-6">
+                    <div className="p-5 md:p-8 flex flex-col gap-5 md:gap-6">
                         {error && (
                             <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-center gap-2 text-red-500 text-sm font-medium">
                                 <span className="material-symbols-outlined text-[18px]">error</span>
                                 {error}
                             </div>
                         )}
-                        <form onSubmit={handleLogin} className="flex flex-col gap-6">
+                        <form onSubmit={handleLogin} className="flex flex-col gap-5 md:gap-6">
                             <div className="flex flex-col gap-2">
                                 <label className="text-sm font-medium leading-normal text-[#111418] dark:text-white" htmlFor="email">
                                     Admin Email
                                 </label>
                                 <div className="group flex w-full items-stretch rounded-lg border border-slate-200 dark:border-[#324467] bg-slate-100 dark:bg-[#232d42] focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all duration-200">
                                     <input
-                                        className="flex-1 bg-transparent px-4 py-3.5 text-base text-[#111418] dark:text-white placeholder:text-slate-400 dark:placeholder:text-[#637588] focus:outline-none"
+                                        className="flex-1 bg-transparent px-4 py-3 md:py-3.5 text-base text-[#111418] dark:text-white placeholder:text-slate-400 dark:placeholder:text-[#637588] focus:outline-none"
                                         id="email"
                                         placeholder="admin@example.com"
                                         type="email"
@@ -142,7 +143,7 @@ export default function AdminLoginPage() {
                                 </div>
                                 <div className="group flex w-full items-stretch rounded-lg border border-slate-200 dark:border-[#324467] bg-slate-100 dark:bg-[#232d42] focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all duration-200">
                                     <input
-                                        className="flex-1 bg-transparent px-4 py-3.5 text-base text-[#111418] dark:text-white placeholder:text-slate-400 dark:placeholder:text-[#637588] focus:outline-none"
+                                        className="flex-1 bg-transparent px-4 py-3 md:py-3.5 text-base text-[#111418] dark:text-white placeholder:text-slate-400 dark:placeholder:text-[#637588] focus:outline-none"
                                         id="password"
                                         placeholder="••••••••"
                                         type="password"
@@ -155,7 +156,7 @@ export default function AdminLoginPage() {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="mt-2 w-full rounded-lg bg-primary py-3.5 text-base font-bold text-white shadow-lg shadow-primary/25 transition-all hover:bg-blue-600 hover:shadow-primary/40 focus:ring-4 focus:ring-primary/20 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                className="mt-1 w-full rounded-lg bg-primary py-3 md:py-3.5 text-base font-bold text-white shadow-lg shadow-primary/25 transition-all hover:bg-blue-600 hover:shadow-primary/40 focus:ring-4 focus:ring-primary/20 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
                                 {loading ? (
                                     <>
@@ -166,16 +167,11 @@ export default function AdminLoginPage() {
                                     'Masuk Dashboard'
                                 )}
                             </button>
-                            <div className="text-center">
-                                <button type="button" onClick={handleRecalibrate} className="text-xs text-slate-400 hover:text-primary transition-colors underline">
-                                    Sinkronkan Database (Klik jika Login Gagal)
-                                </button>
-                            </div>
                         </form>
                     </div>
-                    <div className="bg-slate-100 dark:bg-[#111722] py-3 px-8 border-t border-slate-200 dark:border-[#324467] flex items-center justify-center gap-2">
+                    <div className="bg-slate-100 dark:bg-[#111722] py-3 px-4 md:px-8 border-t border-slate-200 dark:border-[#324467] flex items-center justify-center gap-2">
                         <span className="material-symbols-outlined text-[16px] text-green-500">lock</span>
-                        <p className="text-xs text-slate-500 dark:text-[#92a4c9] font-medium">256-bit End-to-End Encryption</p>
+                        <p className="text-xs text-slate-500 dark:text-[#92a4c9] font-medium text-center">256-bit End-to-End Encryption</p>
                     </div>
                 </div>
                 <p className="mt-8 text-center text-xs text-slate-500 dark:text-[#92a4c9]/60">

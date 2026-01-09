@@ -10,6 +10,8 @@ export interface Sensor {
     firebaseConfig?: string; // JSON string for flexibility
     firebasePath?: string;
     spreadsheetUrl?: string; // Google Sheet URL for Reports
+    targetValue?: number; // Ideal target value (e.g. 50cm width)
+    tolerance?: number; // Allowed deviation (e.g. 1cm)
 }
 
 export interface User {
@@ -17,6 +19,7 @@ export interface User {
     username: string;
     email: string;
     role: 'admin' | 'user';
+    subRole?: 'printing' | 'sylum' | 'listrik' | 'all'; // Added subRole
     permissions: {
         viewSpeed: boolean;
         viewSack: boolean;
