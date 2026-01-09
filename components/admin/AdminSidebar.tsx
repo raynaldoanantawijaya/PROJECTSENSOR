@@ -152,7 +152,9 @@ export default function AdminSidebar({ isOpen = false, onClose }: AdminSidebarPr
                         <div className="flex items-center gap-3 px-2 p-2 bg-[#1a2336]/50 rounded-lg border border-white/5 mx-[-8px]">
                             <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-sm border 
                                 ${isCommander ? 'bg-amber-500/20 text-amber-500 border-amber-500/20' : 'bg-blue-500/20 text-blue-500 border-blue-500/20'}`}>
-                                {currentUser?.username?.substring(0, 2).toUpperCase() || 'AD'}
+                                <span className="material-symbols-outlined text-[20px]">
+                                    {isCommander ? 'local_police' : 'security'}
+                                </span>
                             </div>
                             <div className="flex flex-col min-w-0 flex-1">
                                 <p className={`text-sm font-bold truncate ${isCommander ? 'text-amber-500' : 'text-white'}`}>
@@ -168,15 +170,6 @@ export default function AdminSidebar({ isOpen = false, onClose }: AdminSidebarPr
                                     )}
                                 </div>
                             </div>
-
-                            {/* Logout Icon Button */}
-                            <button
-                                onClick={handleLogout}
-                                title="Logout"
-                                className="w-9 h-9 flex items-center justify-center rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all ml-1 shrink-0"
-                            >
-                                <span className="material-symbols-outlined text-[18px]">logout</span>
-                            </button>
                         </div>
                     )}
                 </div>

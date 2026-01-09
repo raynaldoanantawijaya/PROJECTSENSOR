@@ -30,8 +30,26 @@ export default function AdminHeader({ onMenuClick, children }: AdminHeaderProps)
                 </button>
                 <h2 className="text-white text-lg font-bold leading-tight tracking-[-0.015em]">{getPageTitle()}</h2>
             </div>
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4">
                 {children}
+                <button
+                    onClick={async (e) => {
+                        e.preventDefault();
+                        try {
+                            const { logoutAdminAction } = await import('@/app/actions/auth-actions');
+                            await logoutAdminAction();
+                            localStorage.removeItem('currentAdmin');
+                            window.location.href = '/admin';
+                        } catch (error) {
+                            console.error("Logout failed", error);
+                            window.location.href = '/admin';
+                        }
+                    }}
+                    title="Logout"
+                    className="w-9 h-9 flex items-center justify-center rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                >
+                    <span className="material-symbols-outlined text-[20px]">logout</span>
+                </button>
             </div>
         </header>
     );
