@@ -18,8 +18,25 @@ export default function DashboardLayout({
     useEffect(() => {
         storageService.init();
         const storedUser = localStorage.getItem('currentUser');
+        const loginTimestamp = localStorage.getItem('loginTimestamp');
+        const EIGHT_HOURS_MS = 8 * 60 * 60 * 1000;
 
-        if (!storedUser) {
+        // Security Check: Session Expiry
+        if (loginTimestamp) {
+            const timeElapsed = Date.now() - parseInt(loginTimestamp);
+            if (timeElapsed > EIGHT_HOURS_MS) {
+                console.warn("Session expired (8 hours limit). Logging out...");
+                localStorage.removeItem('currentUser');
+                localStorage.removeItem('loginTimestamp');
+                // Dynamic import to avoid circular dep if needed, or assume global authService usage
+                // Ideally clear firebase auth too
+                import("@/lib/auth").then(({ authService }) => authService.logout());
+                router.push('/');
+                return;
+            }
+        }
+
+        if (!storedUser) { // Strict: User must have session data
             router.push('/');
         } else {
             setAuthorized(true);

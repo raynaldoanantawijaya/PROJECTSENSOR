@@ -44,6 +44,7 @@ export default function LoginPage() {
       if (appUser) {
         const safeUser = { ...appUser };
         localStorage.setItem('currentUser', JSON.stringify(safeUser));
+        localStorage.setItem('loginTimestamp', Date.now().toString());
         console.log("Session saved, redirecting in 500ms...");
         setTimeout(() => {
           router.push("/dashboard");
