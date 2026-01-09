@@ -134,8 +134,37 @@ export async function deleteUserAction(targetUid: string): Promise<{ success: bo
     }
 }
 
-export async function loginAdminAction(idToken: string): Promise<{ success: boolean; error?: string }> {
+const TURNSTILE_SECRET_KEY = process.env.TURNSTILE_SECRET_KEY;
+
+async function verifyTurnstileToken(token: string): Promise<boolean> {
+    if (!TURNSTILE_SECRET_KEY) return true; // Bypass if not configured (dev mode safe)
+
     try {
+        const formData = new URLSearchParams();
+        formData.append('secret', TURNSTILE_SECRET_KEY);
+        formData.append('response', token);
+
+        const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+            method: 'POST',
+            body: formData,
+        });
+
+        const data = await res.json();
+        return data.success === true;
+    } catch (e) {
+        console.error("Turnstile verification failed:", e);
+        return false;
+    }
+}
+
+export async function loginAdminAction(idToken: string, turnstileToken: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        // 0. Verify Turnstile
+        const isHuman = await verifyTurnstileToken(turnstileToken);
+        if (!isHuman) {
+            return { success: false, error: "Security Check Failed. Please reload and try again." };
+        }
+
         const auth = getAdminAuth();
 
         // 1. Verify ID Token
