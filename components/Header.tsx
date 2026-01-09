@@ -25,11 +25,10 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
                 <Link
                     href="/"
-                    className="ml-2 flex items-center gap-2 px-3 py-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                    className="w-9 h-9 flex items-center justify-center rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all"
                     title="Logout"
                 >
-                    <span className="font-medium">Logout</span>
-                    <span className="material-symbols-outlined">logout</span>
+                    <span className="material-symbols-outlined text-[20px]">logout</span>
                 </Link>
             </div>
         </header>
