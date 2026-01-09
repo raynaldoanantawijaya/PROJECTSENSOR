@@ -185,8 +185,8 @@ export async function loginAdminAction(idToken: string, turnstileToken: string):
             return { success: false, error: "Access Denied: You are not an admin." };
         }
 
-        // 3. Create Session Cookie (expires in 5 days)
-        const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days
+        // 3. Create Session Cookie (expires in 8 hours)
+        const expiresIn = 60 * 60 * 8 * 1000; // 8 hours
         const sessionCookie = await auth.createSessionCookie(idToken, { expiresIn });
 
         // 4. Set Cookie
