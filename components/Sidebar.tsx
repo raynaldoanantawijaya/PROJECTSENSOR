@@ -280,6 +280,51 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                         </Link>
                     </div>
                 </nav>
+                {/* User Profile Section */}
+                {user && (
+                    <div className="px-6 mb-4">
+                        <div className={`p-4 rounded-xl border ${user.role === 'admin'
+                                ? (user.username === 'RAYNALDO ANANTA WIJAYA' ? 'bg-amber-500/10 border-amber-500/20' : 'bg-blue-500/10 border-blue-500/20')
+                                : 'bg-indigo-500/10 border-indigo-500/20'
+                            }`}>
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold shadow-sm ${user.role === 'admin'
+                                        ? (user.username === 'RAYNALDO ANANTA WIJAYA' ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white' : 'bg-gradient-to-br from-blue-400 to-indigo-500 text-white')
+                                        : 'bg-gradient-to-br from-indigo-400 to-purple-500 text-white'
+                                    }`}>
+                                    {user.username.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                                        {user.username}
+                                    </p>
+                                    <div className="flex items-center gap-1.5">
+                                        <div className={`h-1.5 w-1.5 rounded-full ${user.role === 'admin'
+                                                ? (user.username === 'RAYNALDO ANANTA WIJAYA' ? 'bg-amber-500' : 'bg-blue-500')
+                                                : 'bg-indigo-500'
+                                            }`}></div>
+                                        <p className={`text-xs font-medium truncate ${user.role === 'admin'
+                                                ? (user.username === 'RAYNALDO ANANTA WIJAYA' ? 'text-amber-600 dark:text-amber-400' : 'text-blue-600 dark:text-blue-400')
+                                                : 'text-indigo-600 dark:text-indigo-400'
+                                            }`}>
+                                            {user.username === 'RAYNALDO ANANTA WIJAYA' ? 'COMMANDER' : user.role.toUpperCase()}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {user.subRole && (
+                                <div className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider text-center ${user.role === 'admin'
+                                        ? (user.username === 'RAYNALDO ANANTA WIJAYA' ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' : 'bg-blue-500/20 text-blue-700 dark:text-blue-300')
+                                        : 'bg-indigo-500/20 text-indigo-700 dark:text-indigo-300'
+                                    }`}>
+                                    ACCESS: {user.subRole}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 <div className="px-6">
                     <div className="p-4 rounded-xl bg-slate-50 dark:bg-surface-dark border border-gray-200 dark:border-border-dark">
                         <div className="flex items-center gap-3 mb-2">
