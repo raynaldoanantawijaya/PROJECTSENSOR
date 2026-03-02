@@ -1,5 +1,5 @@
 import { db, initFirebase } from "./firebase";
-import { collection, getDocs, doc, setDoc, deleteDoc, query } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, deleteDoc, query, onSnapshot } from "firebase/firestore";
 
 export interface Sensor {
     id: string;
@@ -144,6 +144,20 @@ export const storageService = {
             console.error("Error deleting user:", error);
             throw error;
         }
+    },
+
+    // Realtime listener for a single sensor document
+    onSensorChange: (sensorId: string, callback: (sensor: Sensor | null) => void) => {
+        const docRef = doc(db, "sensors", sensorId);
+        return onSnapshot(docRef, (snapshot) => {
+            if (snapshot.exists()) {
+                callback({ id: snapshot.id, ...snapshot.data() } as Sensor);
+            } else {
+                callback(null);
+            }
+        }, (error) => {
+            console.error("Sensor listener error:", error);
+        });
     }
 };
 
