@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useEffect, useState, use, useMemo } from "react";
 import { storageService, Sensor } from '@/lib/storage';
-import { useSmartSensorData } from "@/lib/smart-sensor";
+import { useSackSensorData, writeSackCalibration } from "@/lib/useSackSensorData";
 
 export default function SackSensorDetail({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
     const [sensor, setSensor] = useState<Sensor | null>(null);
-    const [count, setCount] = useState(0);
+    const [lebarVal, setLebarVal] = useState(0);  // Hasil pengukuran
+    const [offsetVal, setOffsetVal] = useState(0); // Hasil kalibrasi
     const [isVisible, setIsVisible] = useState(true);
 
     // History for chart
@@ -18,7 +19,9 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
 
     // Config Editing State
     const [targetVal, setTargetVal] = useState(50);
+    const [targetInputVal, setTargetInputVal] = useState('50');
     const [toleranceVal, setToleranceVal] = useState(1);
+    const [toleranceInputVal, setToleranceInputVal] = useState('1');
     const [isSaving, setIsSaving] = useState(false);
 
     // Save Config Handler
@@ -33,8 +36,20 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
             };
             await storageService.saveSensor(updatedSensor);
             setSensor(updatedSensor);
-            if (key === 'target') setTargetVal(val);
-            else setToleranceVal(val);
+            if (key === 'target') {
+                setTargetVal(val);
+                // Write target to Firebase RTDB kalibrasi path
+                if (sensor.sackPathKalibrasi) {
+                    const success = await writeSackCalibration(
+                        sensor.firebaseConfig || '',
+                        sensor.sackPathKalibrasi,
+                        String(val)
+                    );
+                    if (!success) console.warn('Failed to write kalibrasi to Firebase RTDB');
+                }
+            } else {
+                setToleranceVal(val);
+            }
         } catch (e) {
             alert("Gagal menyimpan konfigurasi");
         }
@@ -56,8 +71,14 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
             const found = sensors.find(s => s.id === id);
             if (found) {
                 setSensor(found);
-                if (found.targetValue !== undefined) setTargetVal(found.targetValue);
-                if (found.tolerance !== undefined) setToleranceVal(found.tolerance);
+                if (found.targetValue !== undefined) {
+                    setTargetVal(found.targetValue);
+                    setTargetInputVal(String(found.targetValue));
+                }
+                if (found.tolerance !== undefined) {
+                    setToleranceVal(found.tolerance);
+                    setToleranceInputVal(String(found.tolerance));
+                }
             } else {
                 setSensor({ id: 'err', name: 'Sensor Not Found', type: 'sack', status: 'inactive' });
             }
@@ -65,20 +86,22 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
         fetchSensor();
     }, [id]);
 
-    // 2. SMART DATA HOOK
+    // 2. SACK SENSOR DATA HOOK (multi-path)
     const safeSensor = sensor || { id: 'loading', status: 'inactive', name: '', type: 'sack' } as Sensor;
-    const { speed: smartCount, lastUpdated, isConnected } = useSmartSensorData(safeSensor, isVisible, 5000);
+    const sackData = useSackSensorData(safeSensor, isVisible, 5000);
+    const { lebar, offset, ir1, ir2, isConnected, lastUpdated } = sackData;
 
     // Sync Data Logic
     useEffect(() => {
         if (!sensor || !isConnected) return;
-        setCount(smartCount);
-        setHistory(prev => [...prev.slice(1), smartCount]);
-    }, [smartCount, lastUpdated, isConnected, sensor]);
+        setLebarVal(lebar);
+        setOffsetVal(offset);
+        setHistory(prev => [...prev.slice(1), lebar]);
+    }, [lebar, offset, lastUpdated, isConnected, sensor]);
 
     // Chart Helper
     const valToY = (val: number) => {
-        const maxVal = 1000; // Asumsi max produksi per sesi
+        const maxVal = 100; // Max width in cm
         const percentage = Math.min(1, Math.max(0, val / maxVal));
         return 90 - (percentage * 80);
     };
@@ -127,8 +150,8 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
                         <span className="material-symbols-outlined text-[10px]">chevron_right</span>
                         <span className="text-white">{sensor.name}</span>
                     </div>
-                    <h1 className="text-white text-3xl font-bold tracking-tight">Sensor Lebar Karung</h1>
-                    <p className="text-[#92a4c9] text-sm">Monitoring lebar karung mesin A secara real-time</p>
+                    <h1 className="text-white text-3xl font-bold tracking-tight">Sensor Lebar</h1>
+                    <p className="text-[#92a4c9] text-sm">Konfigurasi dan kalibrasi sensor secara real-time</p>
                 </div>
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-[#232f48]/50 rounded-full border border-green-500/20">
                     <div className="size-2 rounded-full bg-green-500 live-dot"></div>
@@ -163,9 +186,9 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
 
                             {/* Dynamic Needle/Arrow */}
                             <div className="absolute top-0 h-full w-1 transition-all duration-500 ease-out z-10"
-                                style={{ left: `${Math.min(100, Math.max(0, count))}%` }}>
+                                style={{ left: `${Math.min(100, Math.max(0, lebarVal))}%` }}>
                                 <div className="absolute -top-1 -left-3 bg-white text-slate-900 text-xs font-bold px-1.5 py-0.5 rounded shadow-lg">
-                                    {count}
+                                    {lebarVal}
                                 </div>
                                 <div className="absolute top-6 -left-1 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[6px] border-t-white"></div>
                                 <div className="h-full w-0.5 bg-white/50 mx-auto mt-6"></div>
@@ -184,7 +207,7 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
 
                         {/* Big Value Display */}
                         <div className="flex justify-center items-baseline mt-4">
-                            <span className="text-4xl font-bold text-white">{count}</span>
+                            <span className="text-4xl font-bold text-white">{lebarVal}</span>
                             <span className="text-sm text-[#92a4c9] ml-1">cm</span>
                         </div>
                     </div>
@@ -193,7 +216,7 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
                         <div className="flex flex-col">
                             <span className="text-[#92a4c9] text-xs">Current Zone</span>
                             {/* Logic to determine zone based on target and tolerance */}
-                            {Math.abs(count - targetVal) <= toleranceVal ? (
+                            {Math.abs(lebarVal - targetVal) <= toleranceVal ? (
                                 <span className="text-green-500 text-sm font-bold flex items-center gap-1">
                                     <span className="size-2 bg-green-500 rounded-full animate-pulse"></span>
                                     Safe (Optimal)
@@ -211,13 +234,25 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
                                 <span className="text-[#92a4c9] text-xs pb-0.5">Target Width</span>
                                 <div className="flex items-center justify-end gap-1 relative">
                                     <input
-                                        type="number"
+                                        type="text"
+                                        inputMode="decimal"
                                         className="w-16 bg-transparent text-right text-white text-sm font-medium focus:outline-none border-b border-dashed border-slate-600 focus:border-solid focus:border-blue-500 transition-all p-0 m-0"
-                                        value={targetVal || ''}
-                                        onChange={(e) => setTargetVal(Number(e.target.value))}
-                                        onBlur={(e) => handleSaveConfig('target', Number(e.target.value))}
+                                        value={targetInputVal}
+                                        onChange={(e) => {
+                                            const raw = e.target.value.replace(/,/g, '.');
+                                            // Allow digits, single dot, and empty string while typing
+                                            if (/^\d*\.?\d*$/.test(raw)) {
+                                                setTargetInputVal(raw);
+                                            }
+                                        }}
+                                        onBlur={() => {
+                                            const num = parseFloat(targetInputVal) || 0;
+                                            setTargetVal(num);
+                                            setTargetInputVal(String(num));
+                                            handleSaveConfig('target', num);
+                                        }}
                                         onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                                        placeholder="0"
+                                        placeholder="0.0"
                                     />
                                     <span className="text-white text-sm font-medium">cm</span>
                                     <span className="material-symbols-outlined text-[12px] text-blue-500 absolute -right-5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">edit</span>
@@ -229,13 +264,24 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
                                 <span className="text-[#92a4c9] text-xs pb-0.5">Tolerance</span>
                                 <div className="flex items-center justify-end gap-1 relative">
                                     <input
-                                        type="number"
+                                        type="text"
+                                        inputMode="decimal"
                                         className="w-12 bg-transparent text-right text-white text-sm font-medium focus:outline-none border-b border-dashed border-slate-600 focus:border-solid focus:border-blue-500 transition-all p-0 m-0"
-                                        value={toleranceVal || ''}
-                                        onChange={(e) => setToleranceVal(Number(e.target.value))}
-                                        onBlur={(e) => handleSaveConfig('tolerance', Number(e.target.value))}
+                                        value={toleranceInputVal}
+                                        onChange={(e) => {
+                                            const raw = e.target.value.replace(/,/g, '.');
+                                            if (/^\d*\.?\d*$/.test(raw)) {
+                                                setToleranceInputVal(raw);
+                                            }
+                                        }}
+                                        onBlur={() => {
+                                            const num = parseFloat(toleranceInputVal) || 0;
+                                            setToleranceVal(num);
+                                            setToleranceInputVal(String(num));
+                                            handleSaveConfig('tolerance', num);
+                                        }}
                                         onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                                        placeholder="0"
+                                        placeholder="0.0"
                                     />
                                     <span className="text-white text-sm font-medium">cm</span>
                                     <span className="material-symbols-outlined text-[12px] text-blue-500 absolute -right-5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">edit</span>
@@ -245,26 +291,49 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
                     </div>
                 </div>
 
-                {/* RIGHT COLUMN: Sensor Details (5 cols) */}
+                {/* RIGHT COLUMN: Setting Sensor (5 cols) */}
                 <div className="lg:col-span-5 bg-[#192233] rounded-xl border border-[#232f48] shadow-lg p-0 overflow-hidden flex flex-col">
-                    <div className="p-4 border-b border-[#232f48] bg-[#1d273b]">
-                        <h3 className="text-white text-base font-semibold">Sensor Details</h3>
+                    <div className="p-4 border-b border-[#232f48] bg-[#1d273b] flex items-center justify-between">
+                        <h3 className="text-white text-base font-semibold flex items-center gap-2">
+                            <span className="material-symbols-outlined text-[#92a4c9] text-[20px]">settings</span>
+                            Setting Sensor
+                        </h3>
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${isConnected ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                            <span className={`size-1.5 rounded-full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></span>
+                            {isConnected ? "Online" : "Offline"}
+                        </span>
                     </div>
-                    <div className="p-6 flex flex-col gap-6 flex-1 justify-center">
-                        <div className="grid grid-cols-[100px_1fr] gap-4 items-center">
-                            <span className="text-[#92a4c9] text-sm font-medium">Machine ID</span>
-                            <span className="text-white text-base font-medium">{sensor.name}</span>
+                    <div className="p-6 flex flex-col gap-5 flex-1">
+                        {/* LED Indicators - Side by Side */}
+                        <div>
+                            <span className="text-[#92a4c9] text-xs font-semibold uppercase tracking-wider mb-3 block">Indicator Status</span>
+                            <div className="flex gap-4">
+                                {/* LED Sensor A */}
+                                <div className="flex-1 flex items-center gap-3 bg-[#111722] border border-[#232f48] rounded-lg px-4 py-3">
+                                    <div className={`size-5 rounded-full shadow-lg transition-all duration-500 ${ir1 ? 'bg-green-500 shadow-green-500/50 animate-pulse' : 'bg-gray-600 shadow-none'}`}></div>
+                                    <div className="flex flex-col">
+                                        <span className="text-white text-sm font-medium">Sensor A (IR1)</span>
+                                        <span className={`text-[10px] font-semibold uppercase tracking-wider ${ir1 ? 'text-green-400' : 'text-gray-500'}`}>{ir1 ? 'Detected' : 'Clear'}</span>
+                                    </div>
+                                </div>
+                                {/* LED Sensor B */}
+                                <div className="flex-1 flex items-center gap-3 bg-[#111722] border border-[#232f48] rounded-lg px-4 py-3">
+                                    <div className={`size-5 rounded-full shadow-lg transition-all duration-500 ${ir2 ? 'bg-green-500 shadow-green-500/50 animate-pulse' : 'bg-gray-600 shadow-none'}`}></div>
+                                    <div className="flex flex-col">
+                                        <span className="text-white text-sm font-medium">Sensor B (IR2)</span>
+                                        <span className={`text-[10px] font-semibold uppercase tracking-wider ${ir2 ? 'text-green-400' : 'text-gray-500'}`}>{ir2 ? 'Detected' : 'Clear'}</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div className="grid grid-cols-[100px_1fr] gap-4 items-center">
-                            <span className="text-[#92a4c9] text-sm font-medium">Status</span>
-                            <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-green-500/10 text-green-500 text-sm font-semibold w-fit border border-green-500/20">
-                                <span className="size-2 rounded-full bg-green-500"></span>
-                                {isConnected ? "Online" : "Offline"}
-                            </span>
-                        </div>
-                        <div className="grid grid-cols-[100px_1fr] gap-4 items-center">
-                            <span className="text-[#92a4c9] text-sm font-medium">Last Update</span>
-                            <span className="text-white text-sm">2 seconds ago</span>
+
+                        {/* Calibration Result Box */}
+                        <div>
+                            <span className="text-[#92a4c9] text-xs font-semibold uppercase tracking-wider mb-3 block">Hasil Kalibrasi</span>
+                            <div className="bg-[#111722] border border-[#232f48] rounded-lg p-5 flex flex-col items-center justify-center gap-2">
+                                <span className={`text-5xl font-bold tracking-tight text-white`}>{parseFloat(offsetVal.toFixed(5))}</span>
+                                <span className="text-[#92a4c9] text-sm font-medium">cm</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -284,7 +353,7 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
                             <span className="text-[9px] text-[#92a4c9] font-medium uppercase tracking-wider">{hoverData ? "Recorded" : "Live"}</span>
                             <div className="flex items-baseline gap-1">
                                 <span className={`text-lg md:text-xl font-bold ${hoverData ? 'text-blue-400' : 'text-white'}`}>
-                                    {hoverData ? Math.round(hoverData.val) : count}
+                                    {hoverData ? Math.round(hoverData.val) : lebarVal}
                                 </span>
                                 <span className="text-[10px] text-[#92a4c9] font-medium">cm</span>
                             </div>

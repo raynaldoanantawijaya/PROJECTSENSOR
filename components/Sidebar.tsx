@@ -199,7 +199,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                                             <div className={`flex-1 flex items-center gap-3 ${pathname === "/dashboard/sack" ? "text-primary font-bold" : "text-slate-600 dark:text-slate-300 font-medium"
                                                 }`}>
                                                 <span className={`material-symbols-outlined text-[20px] ${pathname.includes("/sack") ? "text-primary" : ""}`}>inventory_2</span>
-                                                <span className="text-xs sm:text-sm">Sensor Lebar Karung</span>
+                                                <span className="text-xs sm:text-sm">Sensor Lebar</span>
                                             </div>
                                         </Link>
                                         {expanded["sack"] && (

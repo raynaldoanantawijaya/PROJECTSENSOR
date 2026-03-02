@@ -18,7 +18,12 @@ export default function AdminSensorsPage() {
         status: 'active',
         firebaseConfig: '',
         firebasePath: '',
-        spreadsheetUrl: ''
+        spreadsheetUrl: '',
+        sackPathLebar: '',
+        sackPathOffset: '',
+        sackPathIr1: '',
+        sackPathIr2: '',
+        sackPathKalibrasi: ''
     });
 
     useEffect(() => {
@@ -107,7 +112,12 @@ export default function AdminSensorsPage() {
             status: 'active',
             firebaseConfig: '',
             firebasePath: '',
-            spreadsheetUrl: ''
+            spreadsheetUrl: '',
+            sackPathLebar: '',
+            sackPathOffset: '',
+            sackPathIr1: '',
+            sackPathIr2: '',
+            sackPathKalibrasi: ''
         });
         setIsEditing(false);
         alert(isEditing ? "Sensor updated successfully" : "Sensor added successfully");
@@ -143,7 +153,7 @@ export default function AdminSensorsPage() {
                 userSubRole === 'sylum' ? 'sack' :
                     userSubRole === 'listrik' ? 'kwh' : 'speed';
 
-        setNewSensor({ id: '', name: '', type: defaultType, status: 'active', firebaseConfig: '', firebasePath: '', spreadsheetUrl: '' });
+        setNewSensor({ id: '', name: '', type: defaultType, status: 'active', firebaseConfig: '', firebasePath: '', spreadsheetUrl: '', sackPathLebar: '', sackPathOffset: '', sackPathIr1: '', sackPathIr2: '', sackPathKalibrasi: '' });
         setIsEditing(false);
     };
 
@@ -274,15 +284,77 @@ export default function AdminSensorsPage() {
                                 {(userSubRole && userSubRole !== 'all') && <p className="text-xs text-amber-500">Locked to your department.</p>}
                             </div>
 
-                            <div className="space-y-2">
-                                <label className="block text-sm font-medium text-[#92a4c9]">Firebase Database Path (Node)</label>
-                                <input
-                                    className="w-full bg-[#111722] border border-[#3b4b68] text-white text-sm rounded-lg focus:ring-primary focus:border-primary block p-2.5 placeholder-[#92a4c9]/50 focus:outline-none"
-                                    placeholder="e.g. sensor1/live/speed"
-                                    value={newSensor.firebasePath || ''}
-                                    onChange={e => setNewSensor({ ...newSensor, firebasePath: e.target.value })}
-                                />
-                            </div>
+                            {newSensor.type !== 'sack' && (
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-medium text-[#92a4c9]">Firebase Database Path (Node)</label>
+                                    <input
+                                        className="w-full bg-[#111722] border border-[#3b4b68] text-white text-sm rounded-lg focus:ring-primary focus:border-primary block p-2.5 placeholder-[#92a4c9]/50 focus:outline-none"
+                                        placeholder="e.g. sensor1/live/speed"
+                                        value={newSensor.firebasePath || ''}
+                                        onChange={e => setNewSensor({ ...newSensor, firebasePath: e.target.value })}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Sack Sensor Specific Firebase Paths */}
+                            {newSensor.type === 'sack' && (
+                                <>
+                                    <div className="col-span-1 md:col-span-2 lg:col-span-3">
+                                        <div className="flex items-center gap-2 mb-3 mt-1">
+                                            <span className="material-symbols-outlined text-purple-400 text-[18px]">inventory_2</span>
+                                            <span className="text-purple-400 text-sm font-semibold">Sack Sensor — Firebase RTDB Paths</span>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 bg-purple-500/5 border border-purple-500/10 rounded-lg p-4">
+                                            <div className="space-y-1.5">
+                                                <label className="block text-xs font-medium text-purple-300">Path Lebar (Hasil Ukur)</label>
+                                                <input
+                                                    className="w-full bg-[#111722] border border-[#3b4b68] text-white text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-2.5 placeholder-[#92a4c9]/50 focus:outline-none"
+                                                    placeholder="e.g. mesin104/lebar"
+                                                    value={newSensor.sackPathLebar || ''}
+                                                    onChange={e => setNewSensor({ ...newSensor, sackPathLebar: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <label className="block text-xs font-medium text-purple-300">Path Offset (Kalibrasi)</label>
+                                                <input
+                                                    className="w-full bg-[#111722] border border-[#3b4b68] text-white text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-2.5 placeholder-[#92a4c9]/50 focus:outline-none"
+                                                    placeholder="e.g. mesin104/offset"
+                                                    value={newSensor.sackPathOffset || ''}
+                                                    onChange={e => setNewSensor({ ...newSensor, sackPathOffset: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <label className="block text-xs font-medium text-purple-300">Path IR Sensor 1</label>
+                                                <input
+                                                    className="w-full bg-[#111722] border border-[#3b4b68] text-white text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-2.5 placeholder-[#92a4c9]/50 focus:outline-none"
+                                                    placeholder="e.g. mesin104/ir1"
+                                                    value={newSensor.sackPathIr1 || ''}
+                                                    onChange={e => setNewSensor({ ...newSensor, sackPathIr1: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <label className="block text-xs font-medium text-purple-300">Path IR Sensor 2</label>
+                                                <input
+                                                    className="w-full bg-[#111722] border border-[#3b4b68] text-white text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-2.5 placeholder-[#92a4c9]/50 focus:outline-none"
+                                                    placeholder="e.g. mesin104/ir2"
+                                                    value={newSensor.sackPathIr2 || ''}
+                                                    onChange={e => setNewSensor({ ...newSensor, sackPathIr2: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <label className="block text-xs font-medium text-purple-300">Path Kalibrasi (Write)</label>
+                                                <input
+                                                    className="w-full bg-[#111722] border border-[#3b4b68] text-white text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-2.5 placeholder-[#92a4c9]/50 focus:outline-none"
+                                                    placeholder="e.g. mesin104/kalibrasi"
+                                                    value={newSensor.sackPathKalibrasi || ''}
+                                                    onChange={e => setNewSensor({ ...newSensor, sackPathKalibrasi: e.target.value })}
+                                                />
+                                            </div>
+                                        </div>
+                                        <p className="text-xs text-purple-400/60 mt-2">Path sesuai dengan struktur Firebase RTDB di Arduino (ESP32).</p>
+                                    </div>
+                                </>
+                            )}
 
                             <div className="space-y-2">
                                 <label className="block text-sm font-medium text-[#92a4c9]">Excel Report Link (Google Sheet)</label>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { storageService, Sensor } from "@/lib/storage";
-import { useSmartSensorData } from "@/lib/smart-sensor";
+import { useSackSensorData } from "@/lib/useSackSensorData";
 
 // Variant styles based on status/index
 const VARIANTS = {
@@ -49,8 +49,8 @@ const VARIANTS = {
 };
 
 const SackSensorCard = ({ sensor, index, isVisible }: { sensor: Sensor; index: number; isVisible: boolean }) => {
-    // USE SMART PROXY
-    const { speed: count } = useSmartSensorData(sensor, isVisible, 5000);
+    // USE SACK SENSOR HOOK (multi-path)
+    const { lebar: count } = useSackSensorData(sensor, isVisible, 5000);
 
     // Cycle variants for visual demo if all are 'active', or use real status
     // For this specific UI request, let's map based on status but default to Green
@@ -145,11 +145,11 @@ export default function SackSensorPage() {
                         <div className="flex items-center gap-2 text-[10px] md:text-sm text-[#92a4c9]">
                             <Link href="/dashboard" className="hover:text-white transition-colors font-medium">Dashboard</Link>
                             <span className="material-symbols-outlined text-[#526079] text-sm">chevron_right</span>
-                            <span className="text-white font-medium">Sensor Lebar Karung</span>
+                            <span className="text-white font-medium">Sensor Lebar</span>
                         </div>
                         <div className="flex flex-col gap-1">
-                            <h2 className="text-white tracking-tight text-3xl font-bold">Sensor Lebar Karung</h2>
-                            <p className="text-[#92a4c9] text-sm font-normal">Monitoring dimensi lebar karung secara real-time</p>
+                            <h2 className="text-white tracking-tight text-3xl font-bold">Sensor Lebar</h2>
+                            <p className="text-[#92a4c9] text-sm font-normal">Konfigurasi dan kalibrasi sensor secara real-time</p>
                         </div>
                     </div>
                 </div>

@@ -12,6 +12,12 @@ export interface Sensor {
     spreadsheetUrl?: string; // Google Sheet URL for Reports
     targetValue?: number; // Ideal target value (e.g. 50cm width)
     tolerance?: number; // Allowed deviation (e.g. 1cm)
+    // Sack sensor specific Firebase RTDB paths
+    sackPathLebar?: string;     // e.g. mesin104/lebar
+    sackPathOffset?: string;    // e.g. mesin104/offset
+    sackPathIr1?: string;       // e.g. mesin104/ir1
+    sackPathIr2?: string;       // e.g. mesin104/ir2
+    sackPathKalibrasi?: string; // e.g. mesin104/kalibrasi
 }
 
 export interface User {
