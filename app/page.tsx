@@ -1,10 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { storageService, User } from '@/lib/storage';
-import { authService } from "@/lib/auth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,57 +12,44 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    // Initialize storage/ensure default users exist
-    const init = async () => {
-      await storageService.init();
-    };
-    init();
-
-    // Clear any existing session on login page load
-    authService.logout();
-  }, []);
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
 
     try {
-      console.log("Attempting login with:", email);
+      // Lazy load heavy Firebase modules only when login is clicked
+      const [{ authService }, { storageService }] = await Promise.all([
+        import("@/lib/auth"),
+        import("@/lib/storage"),
+      ]);
+
+      await storageService.init();
+
       // 1. Authenticate with Firebase Auth
       const cred = await authService.login(email, password);
-      console.log("Auth success, UID:", cred.uid);
 
       // 2. Get Profile from Firestore
-      console.log("Fetching user profile for email:", email);
       const appUser = await authService.getUserRole(email);
-      console.log("Profile result:", appUser);
 
       if (appUser) {
         const safeUser = { ...appUser };
-        localStorage.setItem('currentUser', JSON.stringify(safeUser));
-        localStorage.setItem('loginTimestamp', Date.now().toString());
-        console.log("Session saved, redirecting in 500ms...");
-        setTimeout(() => {
-          router.push("/dashboard");
-        }, 500);
+        localStorage.setItem("currentUser", JSON.stringify(safeUser));
+        localStorage.setItem("loginTimestamp", Date.now().toString());
+        router.push("/dashboard");
       } else {
-        console.error("User profile NOT found for:", email);
-        const allUsers = await storageService.getUsers();
-        console.log("DEBUG DATABASE DUMP:", allUsers);
-        console.log("DEBUG COMPARISON:");
-        allUsers.forEach(u => {
-          console.log(`Checking DB User: '${u.email}' vs Input: '${email}' match? ${u.email.toLowerCase() === email.toLowerCase()}`);
-        });
-
-        setError("Login berhasil, tapi data profil tidak ditemukan. Cek Console (F12) untuk detail.");
+        setError(
+          "Login berhasil, tapi data profil tidak ditemukan di database."
+        );
         await authService.logout();
         setIsLoading(false);
       }
     } catch (err: any) {
-      console.error("Login process error:", err);
-      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+      if (
+        err.code === "auth/invalid-credential" ||
+        err.code === "auth/user-not-found" ||
+        err.code === "auth/wrong-password"
+      ) {
         setError("Email atau Password salah.");
       } else {
         setError("Gagal Login: " + (err.message || "Unknown error"));
@@ -77,7 +62,6 @@ export default function LoginPage() {
     <div className="bg-background-light dark:bg-background-dark font-display antialiased min-h-screen flex flex-col items-center justify-center p-4">
       <div
         className="fixed inset-0 pointer-events-none opacity-20"
-        data-alt="Subtle grid dot pattern background"
         style={{
           backgroundImage: "radial-gradient(#324467 1px, transparent 1px)",
           backgroundSize: "32px 32px",
@@ -147,6 +131,7 @@ export default function LoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
                   required
                 />
               </div>
@@ -171,6 +156,7 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
                   required
                 />
                 <button
