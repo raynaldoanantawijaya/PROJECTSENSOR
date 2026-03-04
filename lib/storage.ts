@@ -26,6 +26,7 @@ export interface User {
     email: string;
     role: 'admin' | 'user';
     subRole?: 'printing' | 'sylum' | 'listrik' | 'all'; // Added subRole
+    activeSessions?: string[]; // Array of session UUIDs
     permissions: {
         viewSpeed: boolean;
         viewSack: boolean;

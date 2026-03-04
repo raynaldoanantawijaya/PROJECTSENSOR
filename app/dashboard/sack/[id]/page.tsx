@@ -37,6 +37,12 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
                 tolerance: key === 'tolerance' ? val : toleranceVal
             };
             await storageService.saveSensor(updatedSensor);
+
+            // Log the edit activity
+            import('@/lib/activity-logger').then(({ logUserActivity }) => {
+                logUserActivity('EDIT_CONFIG', `Diubah ${key} menjadi ${val} pada sensor ${sensor.name}`);
+            }).catch(e => console.error("Logger error:", e));
+
             setSensor(updatedSensor);
             if (key === 'target') {
                 setTargetVal(val);

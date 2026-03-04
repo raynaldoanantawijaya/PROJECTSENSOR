@@ -33,9 +33,38 @@ export default function LoginPage() {
       const appUser = await authService.getUserRole(email);
 
       if (appUser) {
-        const safeUser = { ...appUser };
-        localStorage.setItem("currentUser", JSON.stringify(safeUser));
+        // --- 2-DEVICE LIMIT LOGIC ---
+        const activeSessions = appUser.activeSessions || [];
+
+        // If the user already has 2 active devices, reject login
+        if (activeSessions.length >= 2) {
+          setError("Login ditolak: Akun ini sudah mencapai batas maksimal 2 perangkat. Harap hubungi Admin.");
+          await authService.logout();
+          setIsLoading(false);
+          return;
+        }
+
+        // Generate a new session ID for this browser
+        const sessionId = crypto.randomUUID();
+        activeSessions.push(sessionId);
+
+        // Update the user document in Firestore
+        const updatedUser = { ...appUser, activeSessions };
+        await storageService.saveUser(updatedUser);
+
+        // Store user and session data locally
+        localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+        localStorage.setItem("sessionToken", sessionId);
         localStorage.setItem("loginTimestamp", Date.now().toString());
+
+        // Log the successful login
+        try {
+          const { logUserActivity } = await import('@/lib/activity-logger');
+          await logUserActivity('LOGIN', 'User logged into Dashboard');
+        } catch (e) {
+          console.error('Failed to log login activity', e);
+        }
+
         router.push("/dashboard");
       } else {
         setError(

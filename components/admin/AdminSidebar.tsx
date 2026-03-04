@@ -122,6 +122,18 @@ export default function AdminSidebar({ isOpen = false, onClose }: AdminSidebarPr
                     </Link>
 
                     <Link
+                        href="/admin/dashboard/activity"
+                        onClick={onClose}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all group ${isActive('/admin/dashboard/activity')
+                            ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                            : 'text-[#92a4c9] hover:bg-[#232f48] hover:text-white'
+                            }`}
+                    >
+                        <span className="material-symbols-outlined text-[20px]">manage_search</span>
+                        <p className="text-sm font-medium leading-normal">Aktivitas User</p>
+                    </Link>
+
+                    <Link
                         href="/admin/dashboard/sensors"
                         onClick={onClose}
                         className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all group ${isActive('/admin/dashboard/sensors')

@@ -3,7 +3,7 @@
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { storageService } from "@/lib/storage";
 
 export default function DashboardLayout({
@@ -12,6 +12,7 @@ export default function DashboardLayout({
     children: React.ReactNode;
 }) {
     const router = useRouter();
+    const pathname = usePathname();
     const [isSidebarOpen, setSidebarOpen] = useState(false);
     const [authorized, setAuthorized] = useState(false);
 
@@ -45,6 +46,15 @@ export default function DashboardLayout({
             setAuthorized(true);
         }
     }, [router]);
+
+    // Track Page Views
+    useEffect(() => {
+        if (authorized && pathname) {
+            import('@/lib/activity-logger').then(({ throttleLog }) => {
+                throttleLog('VIEW_PAGE', pathname);
+            }).catch(e => console.error("Logger error:", e));
+        }
+    }, [pathname, authorized]);
 
     if (!authorized) {
         return <div className="min-h-screen bg-background-light dark:bg-background-dark flex items-center justify-center">
