@@ -131,8 +131,6 @@ async function getDetailedDeviceInfo(): Promise<string> {
             // Model (e.g., "SM-A546B", "Pixel 7 Pro")
             if (hints.model) {
                 parts.push(hints.model);
-            } else if (isActuallyMobile) {
-                parts.push('Android (Mode Desktop)');
             }
 
             // Browser from fullVersionList
@@ -147,18 +145,18 @@ async function getDetailedDeviceInfo(): Promise<string> {
 
             // Platform
             if (isActuallyMobile) {
-                // Override: Client Hints lies, it's really Android
                 parts.push('Android (Mode Desktop)');
             } else if (hints.platform === 'Android' && hints.mobile === false) {
-                // Older Chrome versions that still report Android in desktop mode
                 parts.push(`Android ${hints.platformVersion || ''} (Mode Desktop)`.trim());
             } else if (hints.platform) {
                 parts.push(`${hints.platform} ${hints.platformVersion || ''}`.trim());
             }
 
-            // Device type
-            if (isActuallyMobile || (hints.platform === 'Android' && !hints.mobile)) {
-                parts.push('Mobile (Mode Desktop)');
+            // Device type — only add if not redundant
+            if (isActuallyMobile) {
+                parts.push('Mobile');
+            } else if (hints.platform === 'Android' && !hints.mobile) {
+                parts.push('Mobile');
             } else if (hints.mobile !== undefined) {
                 parts.push(hints.mobile ? 'Mobile' : 'Desktop');
             }
