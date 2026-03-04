@@ -119,9 +119,22 @@ export const writeSackCalibration = async (
     value: string
 ): Promise<boolean> => {
     try {
+        // Get the logged-in user's ID for authentication
+        let userToken = '';
+        try {
+            const stored = localStorage.getItem('currentUser');
+            if (stored) {
+                const user = JSON.parse(stored);
+                userToken = user.id || user.email || 'authenticated-user';
+            }
+        } catch { }
+
         const res = await fetch('/api/proxy/firebase-write', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                ...(userToken ? { 'X-User-Token': userToken } : {})
+            },
             body: JSON.stringify({
                 firebaseConfig: firebaseConfig,
                 dbPath: kalibrasiPath,

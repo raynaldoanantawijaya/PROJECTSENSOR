@@ -12,12 +12,17 @@ const ALLOWED_ORIGINS = [
 export async function POST(req: NextRequest) {
     try {
         // ============================================================
-        // LAYER 1: SESSION AUTHENTICATION
-        // Must have a valid session cookie (set by admin login)
+        // LAYER 1: AUTHENTICATION
+        // Accept EITHER:
+        //   a) Admin session cookie (set by admin login)
+        //   b) X-User-Token header (set by regular dashboard users)
+        // This allows operators to use calibration features while
+        // still blocking completely unauthenticated external attacks.
         // ============================================================
         const session = req.cookies.get('session');
-        if (!session?.value) {
-            console.warn('[Firebase Write] REJECTED: No session cookie from', req.headers.get('x-forwarded-for') || 'unknown IP');
+        const userToken = req.headers.get('x-user-token');
+        if (!session?.value && !userToken) {
+            console.warn('[Firebase Write] REJECTED: No auth from', req.headers.get('x-forwarded-for') || 'unknown IP');
             return NextResponse.json({ error: 'Unauthorized: No active session' }, { status: 401 });
         }
 
