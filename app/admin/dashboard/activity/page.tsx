@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { storageService, User } from '@/lib/storage';
 import { db } from '@/lib/firebase';
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs, deleteDoc, doc, writeBatch } from 'firebase/firestore';
 import { ActivityLog } from '@/lib/activity-logger';
 
 export default function AdminActivityPage() {
@@ -61,6 +61,31 @@ export default function AdminActivityPage() {
         }
     };
 
+    const handleClearAllLogs = async () => {
+        if (!confirm('Apakah Anda yakin ingin menghapus SEMUA log aktivitas? Tindakan ini tidak bisa dikembalikan.')) return;
+        try {
+            const activityRef = collection(db, 'user_activity');
+            const allDocs = await getDocs(activityRef);
+            // Use batch delete (max 500 per batch)
+            let batch = writeBatch(db);
+            let count = 0;
+            for (const docSnap of allDocs.docs) {
+                batch.delete(docSnap.ref);
+                count++;
+                if (count % 400 === 0) {
+                    await batch.commit();
+                    batch = writeBatch(db);
+                }
+            }
+            await batch.commit();
+            setLogs([]);
+            alert(`Berhasil menghapus ${count} log aktivitas.`);
+        } catch (error) {
+            console.error('Gagal menghapus log:', error);
+            alert('Gagal menghapus log.');
+        }
+    };
+
     if (isLoading) {
         return (
             <div className="flex-1 flex items-center justify-center min-h-[50vh]">
@@ -77,13 +102,22 @@ export default function AdminActivityPage() {
                         <h2 className="text-white tracking-tight text-3xl font-bold leading-tight">Aktivitas User</h2>
                         <p className="text-[#92a4c9] text-base font-normal">Pantau aktivitas pengguna dan kelola perangkat aktif.</p>
                     </div>
-                    <button
-                        onClick={loadData}
-                        className="flex items-center gap-2 bg-[#232f48] hover:bg-[#3b4b68] text-white px-4 py-2.5 rounded-lg border border-white/5 transition-all text-sm font-medium"
-                    >
-                        <span className="material-symbols-outlined text-[18px]">refresh</span>
-                        Refresh Data
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleClearAllLogs}
+                            className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 px-4 py-2.5 rounded-lg border border-red-500/20 transition-all text-sm font-medium"
+                        >
+                            <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
+                            Hapus Semua Log
+                        </button>
+                        <button
+                            onClick={loadData}
+                            className="flex items-center gap-2 bg-[#232f48] hover:bg-[#3b4b68] text-white px-4 py-2.5 rounded-lg border border-white/5 transition-all text-sm font-medium"
+                        >
+                            <span className="material-symbols-outlined text-[18px]">refresh</span>
+                            Refresh Data
+                        </button>
+                    </div>
                 </div>
 
                 {/* --- Section 1: Active Devices --- */}
