@@ -14,11 +14,36 @@ export interface ActivityLog {
 }
 
 /**
+ * Detects if the browser is a mobile device pretending to be desktop
+ * (e.g., Chrome "Request Desktop Site" on Android).
+ */
+function isMobileInDesktopMode(): boolean {
+    if (typeof window === 'undefined') return false;
+
+    // Check 1: navigator.userAgentData (Chromium) — reports real platform even in desktop mode
+    const nav = navigator as any;
+    if (nav.userAgentData?.platform === 'Android') return true;
+
+    // Check 2: Touch support combined with no mouse pointer (strong heuristic)
+    const hasTouch = navigator.maxTouchPoints > 0 || 'ontouchstart' in window;
+
+    // Check 3: UA says Linux but has touch → almost certainly Android in desktop mode
+    const ua = window.navigator.userAgent;
+    const uaSaysLinux = /Linux/.test(ua) && !/Android/.test(ua);
+
+    if (hasTouch && uaSaysLinux) return true;
+
+    return false;
+}
+
+/**
  * Parses user agent to a detailed, readable string including device brand & model.
+ * Handles Android Desktop Mode correctly.
  * Example outputs:
  *   "Samsung SM-A546B | Chrome 122 | Android 13 | Mobile"
  *   "Apple iPhone | Safari 17.2 | iOS 17.2 | Mobile"
  *   "Desktop | Chrome 122 | Windows 10"
+ *   "Android (Mode Desktop) | Chrome 145 | Mobile"
  */
 function getDeviceInfo(): string {
     if (typeof window === 'undefined') return 'Unknown Device';
@@ -27,15 +52,17 @@ function getDeviceInfo(): string {
         const browser = parser.getBrowser();
         const os = parser.getOS();
         const device = parser.getDevice();
+        const isDesktopMode = isMobileInDesktopMode();
 
         const parts: string[] = [];
 
         // --- Device Brand & Model ---
-        // UAParser extracts vendor (Samsung, Apple, Huawei, Xiaomi, Vivo, Oppo, etc.)
-        // and model (SM-A546B, iPhone, V2147, etc.) from the User-Agent string.
         if (device.vendor || device.model) {
             const brandModel = [device.vendor, device.model].filter(Boolean).join(' ');
             parts.push(brandModel);
+        } else if (isDesktopMode) {
+            // UA is disguised as Desktop, but we know it's mobile
+            parts.push('Android (Mode Desktop)');
         } else {
             // Fallback: try to detect from raw UA string for brands UAParser might miss
             const ua = window.navigator.userAgent;
@@ -43,7 +70,6 @@ function getDeviceInfo(): string {
             if (brandMatch) {
                 parts.push(brandMatch[1]);
             } else {
-                // Generic fallback
                 parts.push(device.type === 'mobile' ? 'Mobile Device' : device.type === 'tablet' ? 'Tablet' : 'Desktop');
             }
         }
@@ -54,13 +80,18 @@ function getDeviceInfo(): string {
         }
 
         // --- OS ---
-        if (os.name) {
+        if (isDesktopMode && os.name === 'Linux') {
+            // Override: It's actually Android in desktop mode
+            parts.push('Android (Mode Desktop)');
+        } else if (os.name) {
             parts.push(`${os.name} ${os.version || ''}`.trim());
         }
 
         // --- Device Type ---
-        if (device.type) {
-            const typeLabel = device.type.charAt(0).toUpperCase() + device.type.slice(1); // "mobile" -> "Mobile"
+        if (isDesktopMode) {
+            parts.push('Mobile (Mode Desktop)');
+        } else if (device.type) {
+            const typeLabel = device.type.charAt(0).toUpperCase() + device.type.slice(1);
             parts.push(typeLabel);
         }
 
@@ -74,9 +105,9 @@ function getDeviceInfo(): string {
  * Attempts to get high-entropy Client Hints for even more specific device info.
  * This is async because the browser may prompt the user or take time to resolve.
  * Falls back to basic getDeviceInfo() if not supported.
+ * Client Hints are IMMUNE to "Request Desktop Site" — they always report the real device.
  */
 async function getDetailedDeviceInfo(): Promise<string> {
-    // Try the modern Client Hints API first (Chromium browsers support this)
     try {
         const nav = navigator as any;
         if (nav.userAgentData && typeof nav.userAgentData.getHighEntropyValues === 'function') {
@@ -86,14 +117,13 @@ async function getDetailedDeviceInfo(): Promise<string> {
 
             const parts: string[] = [];
 
-            // Model (e.g., "SM-A546B", "Pixel 7 Pro")
+            // Model (e.g., "SM-A546B", "Pixel 7 Pro") — always real even in desktop mode
             if (hints.model) {
                 parts.push(hints.model);
             }
 
             // Browser from fullVersionList
             if (hints.fullVersionList && hints.fullVersionList.length > 0) {
-                // Find the main browser (not Chromium or Not brand)
                 const mainBrowser = hints.fullVersionList.find((b: any) =>
                     !b.brand.includes('Chromium') && !b.brand.includes('Not')
                 ) || hints.fullVersionList[0];
@@ -102,13 +132,24 @@ async function getDetailedDeviceInfo(): Promise<string> {
                 }
             }
 
-            // Platform (e.g., "Android 14", "Windows 11")
+            // Platform — always real (e.g. "Android", "Windows") even in desktop mode
             if (hints.platform) {
-                parts.push(`${hints.platform} ${hints.platformVersion || ''}`.trim());
+                let platformStr = `${hints.platform} ${hints.platformVersion || ''}`.trim();
+                // Detect desktop mode: platform is Android but mobile flag is false
+                if (hints.platform === 'Android' && hints.mobile === false) {
+                    platformStr += ' (Mode Desktop)';
+                }
+                parts.push(platformStr);
             }
 
+            // Mobile flag
             if (hints.mobile !== undefined) {
-                parts.push(hints.mobile ? 'Mobile' : 'Desktop');
+                if (hints.platform === 'Android') {
+                    // It's always mobile hardware regardless of the flag
+                    parts.push(hints.mobile ? 'Mobile' : 'Mobile (Mode Desktop)');
+                } else {
+                    parts.push(hints.mobile ? 'Mobile' : 'Desktop');
+                }
             }
 
             if (parts.length > 0) {

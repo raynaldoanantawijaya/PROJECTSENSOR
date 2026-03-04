@@ -47,12 +47,19 @@ export default function DashboardLayout({
         }
     }, [router]);
 
-    // Track Page Views
+    // Track Page Views — ONLY for sensor detail pages (e.g. /dashboard/speed/SPD-02)
+    // Listing pages like /dashboard, /dashboard/speed are NOT logged to save quota.
     useEffect(() => {
         if (authorized && pathname) {
-            import('@/lib/activity-logger').then(({ throttleLog }) => {
-                throttleLog('VIEW_PAGE', pathname);
-            }).catch(e => console.error("Logger error:", e));
+            // Match: /dashboard/{type}/{id} — exactly 3 segments after root
+            const segments = pathname.split('/').filter(Boolean); // ["dashboard", "speed", "SPD-02"]
+            const isDetailPage = segments.length === 3 && segments[0] === 'dashboard';
+
+            if (isDetailPage) {
+                import('@/lib/activity-logger').then(({ throttleLog }) => {
+                    throttleLog('VIEW_PAGE', pathname);
+                }).catch(e => console.error("Logger error:", e));
+            }
         }
     }, [pathname, authorized]);
 
