@@ -68,7 +68,7 @@ export default function AdminLoginPage() {
                 className="absolute top-4 left-4 md:top-6 md:left-6 p-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 transition-colors flex items-center gap-2 group z-20"
                 title="Back to Home"
             >
-                <span className="material-symbols-outlined group-hover:-translate-x-1 transition-transform">&#xe5c4;{/* arrow_back */}</span>
+                <span className="material-symbols-outlined group-hover:-translate-x-1 transition-transform">arrow_back</span>
                 <span className="text-sm font-medium hidden sm:inline">Back to User</span>
             </Link>
 
@@ -80,7 +80,7 @@ export default function AdminLoginPage() {
             <div className="relative z-10 w-full max-w-[420px] md:max-w-[480px]">
                 <div className="flex flex-col items-center mb-6 md:mb-8 text-center">
                     <div className="mb-4 flex h-14 w-14 md:h-16 md:w-16 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20 shadow-lg shadow-primary/10">
-                        <span className="material-symbols-outlined text-3xl md:text-4xl">&#xe312;{/* admin_panel_settings */}</span>
+                        <span className="material-symbols-outlined text-3xl md:text-4xl">admin_panel_settings</span>
                     </div>
                     <h1 className="text-2xl md:text-3xl font-black tracking-tight text-[#111418] dark:text-white mb-2">Admin</h1>
                     <div className="flex items-center gap-2">
@@ -94,7 +94,7 @@ export default function AdminLoginPage() {
                     <div className="p-5 md:p-8 flex flex-col gap-5 md:gap-6">
                         {error && (
                             <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-center gap-2 text-red-500 text-sm font-medium">
-                                <span className="material-symbols-outlined text-[18px]">&#xe000;{/* error */}</span>
+                                <span className="material-symbols-outlined text-[18px]">error</span>
                                 {error}
                             </div>
                         )}
@@ -153,7 +153,7 @@ export default function AdminLoginPage() {
                         </form>
                     </div>
                     <div className="bg-slate-100 dark:bg-[#111722] py-3 px-4 md:px-8 border-t border-slate-200 dark:border-[#324467] flex items-center justify-center gap-2">
-                        <span className="material-symbols-outlined text-[16px] text-green-500">&#xe897;{/* lock */}</span>
+                        <span className="material-symbols-outlined text-[16px] text-green-500">lock</span>
                         <p className="text-xs text-slate-500 dark:text-[#92a4c9] font-medium text-center">256-bit End-to-End Encryption</p>
                     </div>
                 </div>

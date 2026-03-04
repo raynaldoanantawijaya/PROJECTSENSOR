@@ -74,7 +74,7 @@ export default function LoginPage() {
           title="Admin Login"
         >
           <span className="material-symbols-outlined text-[20px]">
-            &#xe312;{/* admin_panel_settings */}
+            admin_panel_settings
           </span>
         </Link>
       </div>
@@ -82,7 +82,7 @@ export default function LoginPage() {
         <div className="flex flex-col items-center gap-4 mb-2">
           <div className="w-16 h-16 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/30">
             <span className="material-symbols-outlined text-primary text-[32px]">
-              &#xe51e;{/* sensors */}
+              sensors
             </span>
           </div>
           <div className="text-center">
@@ -107,7 +107,7 @@ export default function LoginPage() {
 
           {error && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-center gap-2 text-red-500 text-sm font-medium">
-              <span className="material-symbols-outlined text-[18px]">&#xe000;{/* error */}</span>
+              <span className="material-symbols-outlined text-[18px]">error</span>
               {error}
             </div>
           )}
@@ -122,7 +122,7 @@ export default function LoginPage() {
               </label>
               <div className="relative flex items-center">
                 <span className="absolute left-4 text-gray-400 dark:text-text-secondary material-symbols-outlined text-[20px]">
-                  &#xe158;{/* mail */}
+                  mail
                 </span>
                 <input
                   className="form-input w-full rounded-lg border-gray-300 dark:border-border-dark bg-gray-50 dark:bg-[#111722] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-text-secondary pl-11 pr-4 py-3 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm font-normal shadow-sm"
@@ -147,7 +147,7 @@ export default function LoginPage() {
               </div>
               <div className="relative flex items-center group">
                 <span className="absolute left-4 text-gray-400 dark:text-text-secondary material-symbols-outlined text-[20px]">
-                  &#xe897;{/* lock */}
+                  lock
                 </span>
                 <input
                   className="form-input w-full rounded-lg border-gray-300 dark:border-border-dark bg-gray-50 dark:bg-[#111722] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-text-secondary pl-11 pr-12 py-3 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm font-normal shadow-sm"
@@ -165,7 +165,7 @@ export default function LoginPage() {
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   <span className="material-symbols-outlined text-[20px]">
-                    {showPassword ? "\ue8f4" : "\ue8f5"}
+                    {showPassword ? "visibility" : "visibility_off"}
                   </span>
                 </button>
               </div>
@@ -191,7 +191,7 @@ export default function LoginPage() {
               ) : (
                 <>
                   <span className="material-symbols-outlined text-[20px]">
-                    &#xea77;{/* login */}
+                    login
                   </span>
                   <span>Sign In</span>
                 </>
