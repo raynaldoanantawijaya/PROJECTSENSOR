@@ -105,9 +105,14 @@ function getDeviceInfo(): string {
  * Attempts to get high-entropy Client Hints for even more specific device info.
  * This is async because the browser may prompt the user or take time to resolve.
  * Falls back to basic getDeviceInfo() if not supported.
- * Client Hints are IMMUNE to "Request Desktop Site" — they always report the real device.
+ * Falls back to basic getDeviceInfo() if not supported.
+ * Note: Chrome 145+ in "Request Desktop Site" also spoofs Client Hints (reports Linux).
+ * We use navigator.maxTouchPoints as the final truth detector.
  */
 async function getDetailedDeviceInfo(): Promise<string> {
+    // Universal truth check: does this device have a touchscreen?
+    const hasTouchScreen = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0;
+
     try {
         const nav = navigator as any;
         if (nav.userAgentData && typeof nav.userAgentData.getHighEntropyValues === 'function') {
@@ -117,9 +122,17 @@ async function getDetailedDeviceInfo(): Promise<string> {
 
             const parts: string[] = [];
 
-            // Model (e.g., "SM-A546B", "Pixel 7 Pro") — always real even in desktop mode
+            // Detect if this is actually a mobile device pretending to be desktop.
+            // Chrome 145+ spoofs EVERYTHING in Desktop Mode (UA, Client Hints, platform).
+            // The ONLY reliable signal is: does the hardware have a touchscreen?
+            const claimsDesktop = hints.platform !== 'Android' && hints.mobile === false;
+            const isActuallyMobile = claimsDesktop && hasTouchScreen;
+
+            // Model (e.g., "SM-A546B", "Pixel 7 Pro")
             if (hints.model) {
                 parts.push(hints.model);
+            } else if (isActuallyMobile) {
+                parts.push('Android (Mode Desktop)');
             }
 
             // Browser from fullVersionList
@@ -132,24 +145,22 @@ async function getDetailedDeviceInfo(): Promise<string> {
                 }
             }
 
-            // Platform — always real (e.g. "Android", "Windows") even in desktop mode
-            if (hints.platform) {
-                let platformStr = `${hints.platform} ${hints.platformVersion || ''}`.trim();
-                // Detect desktop mode: platform is Android but mobile flag is false
-                if (hints.platform === 'Android' && hints.mobile === false) {
-                    platformStr += ' (Mode Desktop)';
-                }
-                parts.push(platformStr);
+            // Platform
+            if (isActuallyMobile) {
+                // Override: Client Hints lies, it's really Android
+                parts.push('Android (Mode Desktop)');
+            } else if (hints.platform === 'Android' && hints.mobile === false) {
+                // Older Chrome versions that still report Android in desktop mode
+                parts.push(`Android ${hints.platformVersion || ''} (Mode Desktop)`.trim());
+            } else if (hints.platform) {
+                parts.push(`${hints.platform} ${hints.platformVersion || ''}`.trim());
             }
 
-            // Mobile flag
-            if (hints.mobile !== undefined) {
-                if (hints.platform === 'Android') {
-                    // It's always mobile hardware regardless of the flag
-                    parts.push(hints.mobile ? 'Mobile' : 'Mobile (Mode Desktop)');
-                } else {
-                    parts.push(hints.mobile ? 'Mobile' : 'Desktop');
-                }
+            // Device type
+            if (isActuallyMobile || (hints.platform === 'Android' && !hints.mobile)) {
+                parts.push('Mobile (Mode Desktop)');
+            } else if (hints.mobile !== undefined) {
+                parts.push(hints.mobile ? 'Mobile' : 'Desktop');
             }
 
             if (parts.length > 0) {
