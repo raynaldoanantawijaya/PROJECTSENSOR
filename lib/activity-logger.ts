@@ -165,9 +165,11 @@ async function getDetailedDeviceInfo(): Promise<string> {
 }
 
 /**
- * Checks if the user has made more than 15 page views in the last 60 seconds.
+ * Scraping detection counter — runs on EVERY navigation regardless of Firestore writes.
+ * Counts page transitions in a rolling 60-second window.
+ * Returns true if threshold is exceeded (>15 views/min).
  */
-function checkSuspiciousActivity(): boolean {
+function countAndCheckScraping(): boolean {
     if (typeof window === 'undefined') return false;
 
     const now = Date.now();
@@ -180,38 +182,28 @@ function checkSuspiciousActivity(): boolean {
         } catch { }
     }
 
-    // Keep only timestamps from the last 60 seconds
     const ONE_MINUTE = 60 * 1000;
     timestamps = timestamps.filter(t => now - t < ONE_MINUTE);
-
-    // Add current timestamp
     timestamps.push(now);
     sessionStorage.setItem('activity_timestamps', JSON.stringify(timestamps));
 
-    // If more than 15 actions in a minute, flag as suspicious
     return timestamps.length > 15;
 }
 
 /**
- * Core function to log activity to Firestore
+ * Core function to log activity to Firestore.
+ * For LOGIN and EDIT_CONFIG: logs every call.
+ * For VIEW_PAGE/VIEW_EXCEL: only used via oncePerSessionLog().
  */
-export async function logUserActivity(action: string, details: string) {
+export async function logUserActivity(action: string, details: string, forceSuspicious = false) {
     if (typeof window === 'undefined') return;
 
     try {
         const userStr = localStorage.getItem('currentUser');
-        if (!userStr) return; // Don't log anonymous users if not logged in
+        if (!userStr) return;
 
         const user = JSON.parse(userStr);
         if (!user || !user.id || !user.email) return;
-
-        // Skip logging for admins if you want to save more quota, 
-        // but it's usually better to log everyone for security audits.
-
-        let isSuspicious = false;
-        if (action.startsWith('VIEW_PAGE')) {
-            isSuspicious = checkSuspiciousActivity();
-        }
 
         const logEntry: ActivityLog = {
             userId: user.id,
@@ -219,7 +211,7 @@ export async function logUserActivity(action: string, details: string) {
             action,
             details,
             deviceInfo: await getDetailedDeviceInfo(),
-            isSuspicious,
+            isSuspicious: forceSuspicious,
             timestamp: serverTimestamp()
         };
 
@@ -231,27 +223,36 @@ export async function logUserActivity(action: string, details: string) {
 }
 
 /**
- * Throttled logger for page views to save Firebase quota.
- * Only logs the same page view once per minute.
+ * Log a page view ONCE per browser session. Uses sessionStorage so it resets when the tab/browser closes.
+ * The scraping counter ALWAYS runs — if scraping is detected, a SCRAPING_ALERT is force-written.
+ *
+ * Flow:
+ *   1. Always increment the scraping counter (every navigation).
+ *   2. If this specific page hasn't been logged yet this session → write to Firestore (once).
+ *   3. If scraping is detected → force-write a SCRAPING_ALERT to Firestore immediately.
  */
-export function throttleLog(action: 'VIEW_PAGE', details: string) {
+export function oncePerSessionLog(action: 'VIEW_PAGE' | 'VIEW_EXCEL', details: string) {
     if (typeof window === 'undefined') return;
 
-    const cacheKey = `last_log_${action}_${details}`;
-    const lastLogTime = sessionStorage.getItem(cacheKey);
-    const now = Date.now();
-    const ONE_MINUTE = 60 * 1000;
+    // Step 1: Always count this navigation for scraping detection
+    const isScraping = countAndCheckScraping();
 
-    if (lastLogTime) {
-        if (now - parseInt(lastLogTime, 10) < ONE_MINUTE) {
-            // Skipped due to throttling
-            return;
-        }
+    // Step 2: Log the activity ONCE per session for this specific page
+    const sessionKey = `logged_${action}_${details}`;
+    if (!sessionStorage.getItem(sessionKey)) {
+        sessionStorage.setItem(sessionKey, '1');
+        logUserActivity(action, details);
     }
 
-    // Remember we just logged it
-    sessionStorage.setItem(cacheKey, now.toString());
+    // Step 3: If scraping detected, force-write an alert (throttled to 1 alert per minute max)
+    if (isScraping) {
+        const alertKey = 'last_scraping_alert';
+        const lastAlert = sessionStorage.getItem(alertKey);
+        const now = Date.now();
 
-    // Actually write the log
-    logUserActivity(action, details);
+        if (!lastAlert || now - parseInt(lastAlert, 10) > 60000) {
+            sessionStorage.setItem(alertKey, now.toString());
+            logUserActivity('SCRAPING_ALERT', `Terdeteksi aktivitas mencurigakan! Kecepatan navigasi sangat tinggi.`, true);
+        }
+    }
 }

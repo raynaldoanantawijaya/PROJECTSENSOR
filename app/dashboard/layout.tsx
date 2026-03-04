@@ -110,8 +110,8 @@ export default function DashboardLayout({
             const isExcelPage = segments[1] === 'excel'; // Excel has its own logger
 
             if (isDetailPage && !isExcelPage) {
-                import('@/lib/activity-logger').then(({ throttleLog }) => {
-                    throttleLog('VIEW_PAGE', pathname);
+                import('@/lib/activity-logger').then(({ oncePerSessionLog }) => {
+                    oncePerSessionLog('VIEW_PAGE', pathname);
                 }).catch(e => console.error("Logger error:", e));
             }
         }

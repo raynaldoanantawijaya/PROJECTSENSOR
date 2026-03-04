@@ -183,7 +183,9 @@ export default function AdminActivityPage() {
                                                     ${log.action === 'LOGIN' ? 'bg-blue-500/20 text-blue-400' : ''}
                                                     ${log.action === 'EDIT_CONFIG' ? 'bg-amber-500/20 text-amber-400' : ''}
                                                     ${log.action === 'VIEW_PAGE' ? 'bg-slate-500/20 text-slate-300' : ''}
-                                                    ${!['LOGIN', 'EDIT_CONFIG', 'VIEW_PAGE'].includes(log.action) ? 'bg-purple-500/20 text-purple-400' : ''}
+                                                    ${log.action === 'VIEW_EXCEL' ? 'bg-green-500/20 text-green-400' : ''}
+                                                    ${log.action === 'SCRAPING_ALERT' ? 'bg-red-600/30 text-red-400 animate-pulse ring-1 ring-red-500/50' : ''}
+                                                    ${!['LOGIN', 'EDIT_CONFIG', 'VIEW_PAGE', 'VIEW_EXCEL', 'SCRAPING_ALERT'].includes(log.action) ? 'bg-purple-500/20 text-purple-400' : ''}
                                                 `}>
                                                     {log.action}
                                                 </span>

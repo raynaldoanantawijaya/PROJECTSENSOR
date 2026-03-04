@@ -27,9 +27,9 @@ export default function ExcelDetail() {
                 if (currentSensor) {
                     setSensorName(currentSensor.name);
 
-                    // Log which Excel database was opened
-                    import('@/lib/activity-logger').then(({ logUserActivity }) => {
-                        logUserActivity('VIEW_EXCEL', `Membuka data Excel: ${currentSensor.name}`);
+                    // Log which Excel database was opened (once per session)
+                    import('@/lib/activity-logger').then(({ oncePerSessionLog }) => {
+                        oncePerSessionLog('VIEW_EXCEL', `Membuka data Excel: ${currentSensor.name}`);
                     }).catch(() => { });
 
                     if (!currentSensor.spreadsheetUrl || currentSensor.spreadsheetUrl.trim() === "") {
