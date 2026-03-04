@@ -32,30 +32,84 @@ export default function DashboardLayout({
                 console.warn("Session expired (8 hours limit). Logging out...");
                 localStorage.removeItem('currentUser');
                 localStorage.removeItem('loginTimestamp');
-                // Dynamic import to avoid circular dep if needed, or assume global authService usage
-                // Ideally clear firebase auth too
                 import("@/lib/auth").then(({ authService }) => authService.logout());
                 router.push('/');
                 return;
             }
         }
 
-        if (!storedUser) { // Strict: User must have session data
+        if (!storedUser) {
             router.push('/');
         } else {
             setAuthorized(true);
         }
     }, [router]);
 
+    // SESSION HEARTBEAT: Check every 30s if this device's session is still valid.
+    // If an admin clicked "Reset Devices", the sessionToken will be removed from
+    // activeSessions in Firestore, and the next heartbeat will force-logout this browser.
+    useEffect(() => {
+        if (!authorized) return;
+
+        const validateSession = async () => {
+            try {
+                const sessionToken = localStorage.getItem('sessionToken');
+                const userStr = localStorage.getItem('currentUser');
+                if (!sessionToken || !userStr) return;
+
+                const user = JSON.parse(userStr);
+                if (!user?.email) return;
+
+                // Force-refresh to get the latest Firestore data (bypass cache)
+                const users = await storageService.getUsers(true);
+                const latestUser = users.find(
+                    (u: any) => u.email.toLowerCase() === user.email.toLowerCase()
+                );
+
+                if (!latestUser) {
+                    // User has been deleted from Firestore entirely
+                    console.warn("User account deleted. Forcing logout...");
+                    localStorage.clear();
+                    router.push('/');
+                    return;
+                }
+
+                const sessions = latestUser.activeSessions || [];
+                if (!sessions.includes(sessionToken)) {
+                    // Session was cleared by admin → force logout
+                    console.warn("Session invalidated by admin. Forcing logout...");
+                    localStorage.removeItem('currentUser');
+                    localStorage.removeItem('sessionToken');
+                    localStorage.removeItem('loginTimestamp');
+                    import("@/lib/auth").then(({ authService }) => {
+                        import("firebase/auth").then(({ signOut }) => {
+                            signOut(authService as any).catch(() => { });
+                        });
+                    }).catch(() => { });
+                    alert("Sesi Anda telah diakhiri oleh Admin. Silakan login kembali.");
+                    window.location.href = '/';
+                }
+            } catch (e) {
+                console.error("Session validation error:", e);
+            }
+        };
+
+        // Check immediately once, then every 30 seconds
+        validateSession();
+        const intervalId = setInterval(validateSession, 30000);
+
+        return () => clearInterval(intervalId);
+    }, [authorized, router]);
+
     // Track Page Views — ONLY for sensor detail pages (e.g. /dashboard/speed/SPD-02)
-    // Listing pages like /dashboard, /dashboard/speed are NOT logged to save quota.
+    // Excel detail pages have their own dedicated VIEW_EXCEL log with sensor name.
     useEffect(() => {
         if (authorized && pathname) {
-            // Match: /dashboard/{type}/{id} — exactly 3 segments after root
-            const segments = pathname.split('/').filter(Boolean); // ["dashboard", "speed", "SPD-02"]
+            const segments = pathname.split('/').filter(Boolean);
             const isDetailPage = segments.length === 3 && segments[0] === 'dashboard';
+            const isExcelPage = segments[1] === 'excel'; // Excel has its own logger
 
-            if (isDetailPage) {
+            if (isDetailPage && !isExcelPage) {
                 import('@/lib/activity-logger').then(({ throttleLog }) => {
                     throttleLog('VIEW_PAGE', pathname);
                 }).catch(e => console.error("Logger error:", e));
