@@ -2,13 +2,50 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
+// Allowed origins (your own domain + localhost for dev)
+const ALLOWED_ORIGINS = [
+    'https://raynaldotech.my.id',
+    'http://localhost:3000',
+    'http://localhost:3001',
+];
+
 export async function POST(req: NextRequest) {
     try {
+        // ============================================================
+        // LAYER 1: SESSION AUTHENTICATION
+        // Must have a valid session cookie (set by admin login)
+        // ============================================================
+        const session = req.cookies.get('session');
+        if (!session?.value) {
+            console.warn('[Firebase Write] REJECTED: No session cookie from', req.headers.get('x-forwarded-for') || 'unknown IP');
+            return NextResponse.json({ error: 'Unauthorized: No active session' }, { status: 401 });
+        }
+
+        // ============================================================
+        // LAYER 2: ORIGIN / CSRF CHECK
+        // Must originate from our own domain (prevents CSRF attacks)
+        // ============================================================
+        const origin = req.headers.get('origin') || req.headers.get('referer') || '';
+        const isAllowedOrigin = ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed));
+        if (!isAllowedOrigin) {
+            console.warn('[Firebase Write] REJECTED: Origin mismatch:', origin);
+            return NextResponse.json({ error: 'Forbidden: Cross-origin request blocked' }, { status: 403 });
+        }
+
+        // ============================================================
+        // LAYER 3: INPUT VALIDATION
+        // ============================================================
         const body = await req.json();
         const { firebaseConfig, dbPath, value } = body;
 
         if (!dbPath) {
             return NextResponse.json({ error: 'Missing dbPath' }, { status: 400 });
+        }
+
+        // Block path traversal attempts
+        if (dbPath.includes('..') || dbPath.includes('//') || dbPath.startsWith('/')) {
+            console.warn('[Firebase Write] REJECTED: Suspicious dbPath:', dbPath);
+            return NextResponse.json({ error: 'Invalid dbPath' }, { status: 400 });
         }
 
         // Default Database URL

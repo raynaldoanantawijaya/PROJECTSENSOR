@@ -4,8 +4,23 @@ import { getFromCache, setCache } from '@/lib/memory-cache';
 // Force dynamic behaviour for this API route
 export const dynamic = 'force-dynamic';
 
+// Allowed CSRF origins
+const ALLOWED_ORIGINS = [
+    'https://raynaldotech.my.id',
+    'http://localhost:3000',
+    'http://localhost:3001',
+];
+
 export async function POST(req: NextRequest) {
     try {
+        // CSRF Origin Guard
+        const origin = req.headers.get('origin') || req.headers.get('referer') || '';
+        const isAllowedOrigin = ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed));
+        if (!isAllowedOrigin) {
+            console.warn('[Proxy] REJECTED: Origin mismatch:', origin);
+            return NextResponse.json({ error: 'Forbidden: Cross-origin request blocked' }, { status: 403 });
+        }
+
         const body = await req.json();
 
         const { firebaseConfig, dbPath } = body;
