@@ -70,7 +70,7 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
     useEffect(() => {
         let unsubscribe: (() => void) | null = null;
         const setup = async () => {
-            await storageService.init();
+            // Already initialized + pre-warmed by Layout
             unsubscribe = storageService.onSensorChange(id, (found) => {
                 if (found) {
                     setSensor(found);

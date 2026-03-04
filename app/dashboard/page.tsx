@@ -13,18 +13,16 @@ export default function DashboardHome() {
 
     useEffect(() => {
         const init = async () => {
-            await storageService.init();
             const storedUser = localStorage.getItem('currentUser');
-
             if (!storedUser) {
                 router.push('/');
                 return;
             }
 
             try {
-                const sessionUser = JSON.parse(storedUser);
-                // Fetch fresh data
+                // Since Layout pre-warms the cache, these are instant memory reads
                 const allUsers = await storageService.getUsers();
+                const sessionUser = JSON.parse(storedUser);
                 const freshUser = allUsers.find(u => u.id === sessionUser.id);
                 setUser(freshUser || sessionUser);
 
@@ -36,7 +34,6 @@ export default function DashboardHome() {
                 });
             } catch (e) {
                 console.error("Dashboard init error:", e);
-                // Only redirect if absolutely necessary, but for now log error to keep user on page
             } finally {
                 setIsLoading(false);
             }

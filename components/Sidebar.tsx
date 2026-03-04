@@ -16,9 +16,8 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     const [user, setUser] = useState<User | null>(null);
 
     useEffect(() => {
-        // Initialize storage and load sensors
+        // Since Layout pre-warms the cache, these are instant memory reads
         const init = async () => {
-            await storageService.init();
             setSensors(await storageService.getSensors());
 
             const storedUserJSON = localStorage.getItem('currentUser');

@@ -38,7 +38,7 @@ export default function KwhSensorDetail({ params }: { params: Promise<{ id: stri
     // 1. Fetch Sensor Metadata
     useEffect(() => {
         const fetchSensor = async () => {
-            await storageService.init();
+            // Instant cache read
             const sensors = await storageService.getSensors();
             const found = sensors.find(s => s.id === id);
 

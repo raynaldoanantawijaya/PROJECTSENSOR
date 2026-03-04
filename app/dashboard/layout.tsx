@@ -17,6 +17,9 @@ export default function DashboardLayout({
 
     useEffect(() => {
         storageService.init();
+        storageService.getUsers(); // Pre-warm cache for other components
+        storageService.getSensors(); // Pre-warm cache for other components
+
         const storedUser = localStorage.getItem('currentUser');
         const loginTimestamp = localStorage.getItem('loginTimestamp');
         const EIGHT_HOURS_MS = 8 * 60 * 60 * 1000;

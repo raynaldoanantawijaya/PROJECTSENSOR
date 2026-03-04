@@ -53,12 +53,22 @@ const DEFAULT_USERS: User[] = [
     }
 ];
 
+// Simple memory cache
+let cachedSensors: Sensor[] | null = null;
+let cachedSensorsTime = 0;
+let cachedUsers: User[] | null = null;
+let cachedUsersTime = 0;
+const CACHE_DURATION_MS = 10000; // 10 seconds cache
+
 export const storageService = {
     init: async () => {
         await initFirebase();
     },
 
-    getSensors: async (): Promise<Sensor[]> => {
+    getSensors: async (forceRefresh = false): Promise<Sensor[]> => {
+        if (!forceRefresh && cachedSensors && (Date.now() - cachedSensorsTime < CACHE_DURATION_MS)) {
+            return cachedSensors;
+        }
         try {
             const querySnapshot = await getDocs(collection(db, "sensors"));
             const sensors: Sensor[] = [];
@@ -66,6 +76,8 @@ export const storageService = {
                 sensors.push(doc.data() as Sensor);
             });
             // No seeding logic anymore
+            cachedSensors = sensors;
+            cachedSensorsTime = Date.now();
             return sensors;
         } catch (error) {
             console.error("Error fetching sensors:", error);
@@ -76,6 +88,7 @@ export const storageService = {
     saveSensor: async (sensor: Sensor) => {
         try {
             await setDoc(doc(db, "sensors", sensor.id), sensor);
+            cachedSensors = null; // Invalidate cache
             return sensor;
         } catch (error) {
             console.error("Error saving sensor:", error);
@@ -86,6 +99,7 @@ export const storageService = {
     deleteSensor: async (id: string) => {
         try {
             await deleteDoc(doc(db, "sensors", id));
+            cachedSensors = null; // Invalidate cache
         } catch (error) {
             console.error("Error deleting sensor:", error);
             throw error;
@@ -104,7 +118,10 @@ export const storageService = {
         }
     },
 
-    getUsers: async (): Promise<User[]> => {
+    getUsers: async (forceRefresh = false): Promise<User[]> => {
+        if (!forceRefresh && cachedUsers && (Date.now() - cachedUsersTime < CACHE_DURATION_MS)) {
+            return cachedUsers;
+        }
         try {
             const querySnapshot = await getDocs(collection(db, "users"));
             const users: User[] = [];
@@ -118,8 +135,12 @@ export const storageService = {
                 for (const u of DEFAULT_USERS) {
                     await setDoc(doc(db, "users", u.id), u);
                 }
+                cachedUsers = DEFAULT_USERS;
+                cachedUsersTime = Date.now();
                 return DEFAULT_USERS;
             }
+            cachedUsers = users;
+            cachedUsersTime = Date.now();
             return users;
         } catch (error) {
             console.error("Error fetching users:", error);
@@ -130,6 +151,7 @@ export const storageService = {
     saveUser: async (user: User) => {
         try {
             await setDoc(doc(db, "users", user.id), user);
+            cachedUsers = null; // Invalidate cache
             return user;
         } catch (error) {
             console.error("Error saving user:", error);
@@ -140,6 +162,7 @@ export const storageService = {
     deleteUser: async (id: string) => {
         try {
             await deleteDoc(doc(db, "users", id));
+            cachedUsers = null; // Invalidate cache
         } catch (error) {
             console.error("Error deleting user:", error);
             throw error;

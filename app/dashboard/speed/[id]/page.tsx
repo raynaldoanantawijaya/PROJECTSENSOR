@@ -35,10 +35,9 @@ export default function SpeedSensorDetail({ params }: { params: Promise<{ id: st
         return () => document.removeEventListener("visibilitychange", handleVis);
     }, []);
 
-    // 1. Fetch Sensor Metadata
+    // 1. Fetch Sensor Metadata (Instant from cache)
     useEffect(() => {
         const fetchSensor = async () => {
-            await storageService.init();
             const sensors = await storageService.getSensors();
             const found = sensors.find(s => s.id === id);
 
