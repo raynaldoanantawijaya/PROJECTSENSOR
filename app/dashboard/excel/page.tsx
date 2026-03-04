@@ -16,7 +16,6 @@ export default function ExcelPreviewPage() {
 
     useEffect(() => {
         const init = async () => {
-            await storageService.init();
             setSensors(await storageService.getSensors());
 
             const storedUserJSON = localStorage.getItem('currentUser');

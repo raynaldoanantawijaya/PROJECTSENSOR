@@ -154,7 +154,6 @@ export default function KwhSensorPage() {
 
     useEffect(() => {
         const load = async () => {
-            storageService.init();
             const allSensors = await storageService.getSensors();
             setSensors(allSensors.filter(s => s.type === 'kwh'));
         };

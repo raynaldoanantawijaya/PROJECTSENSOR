@@ -125,7 +125,6 @@ export default function SackSensorPage() {
 
     useEffect(() => {
         const load = async () => {
-            storageService.init();
             const allSensors = await storageService.getSensors();
             // Filter only sack sensors
             setSensors(allSensors.filter(s => s.type === 'sack'));

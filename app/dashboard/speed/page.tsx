@@ -136,7 +136,6 @@ export default function SpeedSensorPage() {
     useEffect(() => {
         // Load Sensors
         const load = async () => {
-            storageService.init();
             const allSensors = await storageService.getSensors();
             setSensors(allSensors.filter(s => s.type === 'speed'));
         };
