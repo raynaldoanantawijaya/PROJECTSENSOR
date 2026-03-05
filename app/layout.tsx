@@ -29,11 +29,11 @@ export default function RootLayout({
         <link
           rel="preload"
           as="style"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=add,admin_panel_settings,analytics,arrow_back,aspect_ratio,badge,bolt,check_circle,chevron_right,close,dashboard,delete,delete_sweep,description,description_off,devices,download,edit,electric_meter,electrical_services,error,error_outline,group,history,lock,logout,manage_search,menu,offline_bolt,person,refresh,remove,search,sensors,settings,settings_applications,speed,straighten,texture,trending_up,visibility,visibility_off,warning,waves,wifi&display=block"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=add,admin_panel_settings,analytics,arrow_back,aspect_ratio,badge,bolt,check_circle,chevron_right,close,dashboard,delete,delete_sweep,description,description_off,devices,download,edit,electric_meter,electrical_services,error,error_outline,group,history,lock,logout,manage_search,menu,menu_book,offline_bolt,person,refresh,remove,search,sensors,settings,settings_applications,speed,straighten,texture,trending_up,visibility,visibility_off,warning,waves,wifi&display=block"
         />
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=add,admin_panel_settings,analytics,arrow_back,aspect_ratio,badge,bolt,check_circle,chevron_right,close,dashboard,delete,delete_sweep,description,description_off,devices,download,edit,electric_meter,electrical_services,error,error_outline,group,history,lock,logout,manage_search,menu,offline_bolt,person,refresh,remove,search,sensors,settings,settings_applications,speed,straighten,texture,trending_up,visibility,visibility_off,warning,waves,wifi&display=block"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=add,admin_panel_settings,analytics,arrow_back,aspect_ratio,badge,bolt,check_circle,chevron_right,close,dashboard,delete,delete_sweep,description,description_off,devices,download,edit,electric_meter,electrical_services,error,error_outline,group,history,lock,logout,manage_search,menu,menu_book,offline_bolt,person,refresh,remove,search,sensors,settings,settings_applications,speed,straighten,texture,trending_up,visibility,visibility_off,warning,waves,wifi&display=block"
         />
       </head>
       <body className={`${inter.variable} bg-background-light dark:bg-background-dark font-display antialiased min-h-screen`}>{children}</body>
