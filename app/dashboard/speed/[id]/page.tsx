@@ -22,6 +22,7 @@ export default function SpeedSensorDetail({ params }: { params: Promise<{ id: st
     // History data for the chart (21 points for 0-100 X-axis with step 5)
     // Initialize with 0s
     const [history, setHistory] = useState<number[]>(new Array(21).fill(0));
+    const [timestamps, setTimestamps] = useState<Date[]>(new Array(21).fill(new Date()));
 
     const [data, setData] = useState<SpeedData | null>(null);
     const [hoverData, setHoverData] = useState<{ x: number, y: number, val: number } | null>(null);
@@ -71,6 +72,7 @@ export default function SpeedSensorDetail({ params }: { params: Promise<{ id: st
 
         // Push to History chart 
         setHistory(prev => [...prev.slice(1), smartSpeed]);
+        setTimestamps(prev => [...prev.slice(1), new Date()]);
 
         setData(prev => prev ? ({
             ...prev,
@@ -329,12 +331,11 @@ export default function SpeedSensorDetail({ params }: { params: Promise<{ id: st
                 </div>
 
                 <div className="flex justify-between text-[10px] text-[#92a4c9] px-2 mt-2">
-                    <span>10:00</span>
-                    <span>10:05</span>
-                    <span>10:10</span>
-                    <span>10:15</span>
-                    <span>10:20</span>
-                    <span>10:25</span>
+                    {[0, 4, 8, 12, 16, 20].map(i => (
+                        <span key={i}>
+                            {timestamps[i]?.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Asia/Jakarta' })}
+                        </span>
+                    ))}
                 </div>
             </div>
 
