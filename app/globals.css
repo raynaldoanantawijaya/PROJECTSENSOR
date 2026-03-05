@@ -20,15 +20,7 @@ body {
   @apply antialiased;
 }
 
-/* Local Font Loading */
-@font-face {
-  font-family: 'Material Symbols Outlined';
-  font-style: normal;
-  font-weight: 100 700;
-  font-display: block;
-  /* Prevents FOUT (Flash of Unstyled Text) */
-  src: url('/fonts/material-symbols.woff2') format('woff2');
-}
+/* Icon font is loaded via Google Fonts CDN in layout.tsx (subsetted, ~15-20 KB) */
 
 .material-symbols-outlined {
   font-family: 'Material Symbols Outlined';
