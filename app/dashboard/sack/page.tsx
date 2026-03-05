@@ -151,6 +151,13 @@ export default function SackSensorPage() {
                             <p className="text-[#92a4c9] text-sm font-normal">Konfigurasi dan kalibrasi sensor secara real-time</p>
                         </div>
                     </div>
+                    <Link
+                        href="/dashboard/sack/guide"
+                        className="flex items-center gap-2 px-4 py-2.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg border border-blue-500/20 transition-all text-sm font-medium"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">menu_book</span>
+                        Panduan Kalibrasi
+                    </Link>
                 </div>
             </header>
 

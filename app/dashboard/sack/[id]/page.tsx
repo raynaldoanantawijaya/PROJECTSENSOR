@@ -169,19 +169,9 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
                     <h1 className="text-white text-3xl font-bold tracking-tight">Sensor Lebar</h1>
                     <p className="text-[#92a4c9] text-sm">Konfigurasi dan kalibrasi sensor secara real-time</p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <Link
-                        href="/dashboard/sack/guide"
-                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-full border border-blue-500/20 transition-all text-xs font-medium"
-                        title="Panduan Kalibrasi"
-                    >
-                        <span className="material-symbols-outlined text-[16px]">menu_book</span>
-                        <span className="hidden sm:inline">Panduan</span>
-                    </Link>
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-[#232f48]/50 rounded-full border border-green-500/20">
-                        <div className="size-2 rounded-full bg-green-500 live-dot"></div>
-                        <span className="text-green-400 text-xs font-bold uppercase tracking-wider">Live Data</span>
-                    </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-[#232f48]/50 rounded-full border border-green-500/20">
+                    <div className="size-2 rounded-full bg-green-500 live-dot"></div>
+                    <span className="text-green-400 text-xs font-bold uppercase tracking-wider">Live Data</span>
                 </div>
             </div>
 

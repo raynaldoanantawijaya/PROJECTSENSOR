@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 
 export default function SackGuidePage() {
     return (
@@ -38,13 +37,11 @@ export default function SackGuidePage() {
                 </div>
                 <div className="p-4 md:p-6">
                     <div className="relative w-full rounded-lg overflow-hidden bg-[#111722]">
-                        <Image
-                            src="/images/panduan-kalibrasi.png"
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                            src="/images/panduan-kalibrasi.jpg"
                             alt="Panduan Kalibrasi Sensor Lebar Karung"
-                            width={1920}
-                            height={1080}
                             className="w-full h-auto object-contain"
-                            priority
                         />
                     </div>
                 </div>
