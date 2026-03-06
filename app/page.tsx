@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+const COMMANDER_EMAIL = process.env.NEXT_PUBLIC_COMMANDER_EMAIL || "anantawijaya212@gmail.com";
+
 export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
@@ -33,11 +35,22 @@ export default function LoginPage() {
       const appUser = await authService.getUserRole(email);
 
       if (appUser) {
-        // --- 2-DEVICE LIMIT LOGIC ---
-        const activeSessions = appUser.activeSessions || [];
+        // --- CLEAN UP STALE SESSION FROM THIS BROWSER FIRST ---
+        // If this browser has an old sessionToken (from a crash/force-close),
+        // remove it from Firestore so it doesn't count against the device limit.
+        const existingToken = localStorage.getItem('sessionToken');
+        let activeSessions = appUser.activeSessions || [];
 
-        // If the user already has 2 active devices, reject login
-        if (activeSessions.length >= 2) {
+        if (existingToken && activeSessions.includes(existingToken)) {
+          activeSessions = activeSessions.filter(s => s !== existingToken);
+          localStorage.removeItem('sessionToken');
+        }
+
+        // --- 2-DEVICE LIMIT LOGIC ---
+        // Commander is exempt from device limit (identified by email)
+        const isCommander = appUser.email.toLowerCase() === COMMANDER_EMAIL.toLowerCase();
+
+        if (!isCommander && activeSessions.length >= 2) {
           setError("Login ditolak: Akun ini sudah mencapai batas maksimal 2 perangkat. Harap hubungi Admin.");
           await authService.logout();
           setIsLoading(false);
@@ -46,7 +59,7 @@ export default function LoginPage() {
 
         // Generate a new session ID for this browser
         const sessionId = crypto.randomUUID();
-        activeSessions.push(sessionId);
+        activeSessions = [...activeSessions, sessionId];
 
         // Update the user document in Firestore
         const updatedUser = { ...appUser, activeSessions };
