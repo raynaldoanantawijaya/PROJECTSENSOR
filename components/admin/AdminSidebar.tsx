@@ -146,6 +146,18 @@ export default function AdminSidebar({ isOpen = false, onClose }: AdminSidebarPr
                     </Link>
 
                     <Link
+                        href="/admin/dashboard/hacking"
+                        onClick={onClose}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all group ${isActive('/admin/dashboard/hacking')
+                            ? 'bg-red-500/10 text-red-500 border border-red-500/20 shadow-lg'
+                            : 'text-[#92a4c9] hover:bg-[#232f48] hover:text-white'
+                            }`}
+                    >
+                        <span className="material-symbols-outlined text-[20px] group-hover:text-red-400 transition-colors">security</span>
+                        <p className="text-sm font-medium leading-normal">Hacking</p>
+                    </Link>
+
+                    <Link
                         href="/admin/dashboard/templates"
                         onClick={onClose}
                         className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all group ${isActive('/admin/dashboard/templates')
