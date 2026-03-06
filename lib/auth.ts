@@ -22,31 +22,36 @@ export const authService = {
 
     // Logout
     logout: async () => {
-        try {
-            // Remove active session from Firestore before clearing local storage
-            const userStr = localStorage.getItem('currentUser');
-            const sessionToken = localStorage.getItem('sessionToken');
+        const userStr = localStorage.getItem('currentUser');
+        const sessionToken = localStorage.getItem('sessionToken');
 
-            if (userStr && sessionToken) {
-                try {
-                    const user = JSON.parse(userStr) as AppUser;
-                    // Always fetch latest to avoid overwriting newer sessions incorrectly
-                    const latestUser = await authService.getUserRole(user.email);
-                    if (latestUser && latestUser.activeSessions) {
-                        const updatedSessions = latestUser.activeSessions.filter(s => s !== sessionToken);
-                        await storageService.saveUser({ ...latestUser, activeSessions: updatedSessions });
-                    }
-                } catch (e) {
-                    console.error("Failed to clear session from Firestore", e);
+        // Always clear local storage first
+        localStorage.removeItem('currentUser');
+        localStorage.removeItem('sessionToken');
+        localStorage.removeItem('loginTimestamp');
+        localStorage.removeItem('currentAdmin');
+
+        // Clean session from Firestore (best effort — don't block logout if this fails)
+        if (userStr && sessionToken) {
+            try {
+                const user = JSON.parse(userStr) as AppUser;
+                // Force-refresh from Firestore to get latest session list
+                const users = await storageService.getUsers(true);
+                const latestUser = users.find((u: AppUser) => u.email.toLowerCase() === user.email.toLowerCase());
+                if (latestUser && latestUser.activeSessions) {
+                    const updatedSessions = latestUser.activeSessions.filter((s: string) => s !== sessionToken);
+                    await storageService.saveUser({ ...latestUser, activeSessions: updatedSessions });
                 }
+            } catch (e) {
+                console.error("Failed to clear session from Firestore on logout:", e);
+                // Don't block logout — user will be logged out locally regardless
             }
+        }
 
+        try {
             await firebaseSignOut(auth);
-            localStorage.removeItem('currentUser');
-            localStorage.removeItem('sessionToken');
-            localStorage.removeItem('currentAdmin');
-        } catch (error) {
-            console.error("Logout failed:", error);
+        } catch (e) {
+            console.error("Firebase signOut error:", e);
         }
     },
 

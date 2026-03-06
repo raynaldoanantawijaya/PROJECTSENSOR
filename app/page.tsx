@@ -4,8 +4,6 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-const COMMANDER_EMAIL = process.env.NEXT_PUBLIC_COMMANDER_EMAIL || "anantawijaya212@gmail.com";
-
 export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
@@ -47,11 +45,9 @@ export default function LoginPage() {
         }
 
         // --- 2-DEVICE LIMIT LOGIC ---
-        // Commander is exempt from device limit (identified by email)
-        const isCommander = appUser.email.toLowerCase() === COMMANDER_EMAIL.toLowerCase();
-
-        if (!isCommander && activeSessions.length >= 2) {
-          setError("Login ditolak: Akun ini sudah mencapai batas maksimal 2 perangkat. Harap hubungi Admin.");
+        // --- 2-DEVICE LIMIT LOGIC (applies to all accounts) ---
+        if (activeSessions.length >= 2) {
+          setError("Login ditolak: Akun ini sudah mencapai batas maksimal 2 perangkat. Harap keluar dari perangkat lain terlebih dahulu.");
           await authService.logout();
           setIsLoading(false);
           return;
