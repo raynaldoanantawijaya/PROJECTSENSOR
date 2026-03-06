@@ -236,19 +236,32 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
                                     <span className="size-2 bg-[#92a4c9] rounded-full animate-pulse"></span>
                                     Connecting...
                                 </span>
-                            ) : Math.abs(lebarVal - targetVal) <= toleranceVal ? (
+                            ) : lebarVal >= (targetVal - toleranceVal) && lebarVal <= (targetVal + toleranceVal) ? (
+                                // ✅ SAFE — within tolerance range
                                 <span className="text-green-400 text-sm font-bold flex items-center gap-1">
                                     <span className="size-2 bg-green-500 rounded-full animate-pulse"></span>
-                                    Safe (Optimal)
+                                    Sesuai Toleransi
                                 </span>
+                            ) : lebarVal > (targetVal + toleranceVal) ? (
+                                // 🔴 TOO HIGH — lebar exceeds target + tolerance
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="text-red-400 text-sm font-bold flex items-center gap-1">
+                                        <span className="size-2 bg-red-500 rounded-full animate-pulse"></span>
+                                        Melebihi Batas Toleransi
+                                    </span>
+                                    <span className="text-red-400/70 text-[10px]">
+                                        +{(lebarVal - (targetVal + toleranceVal)).toFixed(2)} cm dari batas atas
+                                    </span>
+                                </div>
                             ) : (
+                                // 🟡 TOO LOW — lebar is below target - tolerance
                                 <div className="flex flex-col gap-0.5">
                                     <span className="text-amber-400 text-sm font-bold flex items-center gap-1">
                                         <span className="size-2 bg-amber-500 rounded-full animate-pulse"></span>
-                                        Warning
+                                        Di Bawah Batas Toleransi
                                     </span>
                                     <span className="text-amber-400/70 text-[10px]">
-                                        Deviasi: {Math.abs(lebarVal - targetVal).toFixed(2)} cm
+                                        -{((targetVal - toleranceVal) - lebarVal).toFixed(2)} cm dari batas bawah
                                     </span>
                                 </div>
                             )}
