@@ -231,17 +231,26 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
                     <div className="flex w-full justify-between items-center border-t border-[#232f48] pt-4 mt-2">
                         <div className="flex flex-col">
                             <span className="text-[#92a4c9] text-xs">Current Zone</span>
-                            {/* Logic to determine zone based on target and tolerance */}
-                            {Math.abs(lebarVal - targetVal) <= toleranceVal ? (
-                                <span className="text-green-500 text-sm font-bold flex items-center gap-1">
+                            {!isConnected ? (
+                                <span className="text-[#92a4c9] text-sm font-bold flex items-center gap-1">
+                                    <span className="size-2 bg-[#92a4c9] rounded-full animate-pulse"></span>
+                                    Connecting...
+                                </span>
+                            ) : Math.abs(lebarVal - targetVal) <= toleranceVal ? (
+                                <span className="text-green-400 text-sm font-bold flex items-center gap-1">
                                     <span className="size-2 bg-green-500 rounded-full animate-pulse"></span>
                                     Safe (Optimal)
                                 </span>
                             ) : (
-                                <span className="text-red-500 text-sm font-bold flex items-center gap-1">
-                                    <span className="size-2 bg-red-500 rounded-full animate-pulse"></span>
-                                    Warning
-                                </span>
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="text-amber-400 text-sm font-bold flex items-center gap-1">
+                                        <span className="size-2 bg-amber-500 rounded-full animate-pulse"></span>
+                                        Warning
+                                    </span>
+                                    <span className="text-amber-400/70 text-[10px]">
+                                        Deviasi: {Math.abs(lebarVal - targetVal).toFixed(2)} cm
+                                    </span>
+                                </div>
                             )}
                         </div>
                         <div className="flex gap-4 md:gap-8">
