@@ -30,44 +30,19 @@ export default function LoginPage() {
       const cred = await authService.login(email, password);
       const idToken = await cred.getIdToken();
 
+      const existingToken = localStorage.getItem('sessionToken');
+
       // 2. Get Profile securely from backend (Bypasses restricted client-side Firestore rules)
       const { getUserProfileLoginAction } = await import('@/app/actions/auth-actions');
-      const profileRes = await getUserProfileLoginAction(idToken);
+      const profileRes = await getUserProfileLoginAction(idToken, existingToken);
 
-      const appUser = profileRes.success ? profileRes.data : null;
-
-      if (appUser) {
-        // --- CLEAN UP STALE SESSION FROM THIS BROWSER FIRST ---
-        // If this browser has an old sessionToken (from a crash/force-close),
-        // remove it from Firestore so it doesn't count against the device limit.
-        const existingToken = localStorage.getItem('sessionToken');
-        let activeSessions: string[] = appUser.activeSessions || [];
-
-        if (existingToken && activeSessions.includes(existingToken)) {
-          activeSessions = activeSessions.filter((s: string) => s !== existingToken);
-          localStorage.removeItem('sessionToken');
-        }
-
-        // --- 2-DEVICE LIMIT LOGIC ---
-        // --- 2-DEVICE LIMIT LOGIC (applies to all accounts) ---
-        if (activeSessions.length >= 2) {
-          setError("Login ditolak: Akun ini sudah mencapai batas maksimal 2 perangkat. Harap keluar dari perangkat lain terlebih dahulu.");
-          await authService.logout();
-          setIsLoading(false);
-          return;
-        }
-
-        // Generate a new session ID for this browser
-        const sessionId = crypto.randomUUID();
-        activeSessions = [...activeSessions, sessionId];
-
-        // Update the user document in Firestore
-        const updatedUser = { ...appUser, activeSessions };
-        await storageService.saveUser(updatedUser);
+      if (profileRes.success && profileRes.data) {
+        const updatedUser = profileRes.data;
+        const sessionId = profileRes.sessionToken;
 
         // Store user and session data locally
         localStorage.setItem("currentUser", JSON.stringify(updatedUser));
-        localStorage.setItem("sessionToken", sessionId);
+        if (sessionId) localStorage.setItem("sessionToken", sessionId);
         localStorage.setItem("loginTimestamp", Date.now().toString());
 
         // Log the successful login

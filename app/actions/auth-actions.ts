@@ -75,20 +75,42 @@ export async function verifyAdminSession() {
 // --------------------------------------------------------------------------------
 // LOGIN HELPERS
 // --------------------------------------------------------------------------------
-export async function getUserProfileLoginAction(idToken: string): Promise<{ success: boolean; data?: any; error?: string }> {
+export async function getUserProfileLoginAction(idToken: string, oldSessionToken?: string | null): Promise<{ success: boolean; data?: any; error?: string; sessionToken?: string }> {
     try {
         const auth = getAdminAuth();
         const decodedToken = await auth.verifyIdToken(idToken);
         const uid = decodedToken.uid;
 
         const db = getAdminFirestore();
-        const userDoc = await db.collection("users").doc(uid).get();
+        const userRef = db.collection("users").doc(uid);
+        const userDoc = await userRef.get();
 
         if (!userDoc.exists) {
             return { success: false, error: "User profile not found in database." };
         }
 
-        return { success: true, data: userDoc.data() };
+        const userData = userDoc.data()!;
+        let activeSessions: string[] = userData.activeSessions || [];
+
+        // Remove old crashed session token if exists
+        if (oldSessionToken && activeSessions.includes(oldSessionToken)) {
+            activeSessions = activeSessions.filter(s => s !== oldSessionToken);
+        }
+
+        // Device Limit Logic: Only apply to standard users, ALWAYS exempt Admins/Commanders
+        const isAdmin = userData.role === 'admin' || userData.role === 'commander';
+        if (!isAdmin && activeSessions.length >= 2) {
+            return { success: false, error: "Login ditolak: Akun ini sudah mencapai batas maksimal 2 perangkat. Harap hubungi Admin untuk reset sesi dari Dashboard." };
+        }
+
+        // Register new session securely Backend-Side
+        const newSessionToken = crypto.randomUUID();
+        activeSessions.push(newSessionToken);
+
+        await userRef.update({ activeSessions });
+        userData.activeSessions = activeSessions;
+
+        return { success: true, data: userData, sessionToken: newSessionToken };
     } catch (e: any) {
         return { success: false, error: e.message };
     }
