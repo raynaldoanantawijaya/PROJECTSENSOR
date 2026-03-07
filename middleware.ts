@@ -27,11 +27,13 @@ export async function middleware(request: NextRequest) {
             action: 'block',
             ruleId: 'CUSTOM_WAF',
             source: attackReport.attackType,
+            attackLabel: attackReport.attackLabel,
             clientRequestURI: pathname + search,
             userAgent: userAgent,
             threatLevel: attackReport.threatLevel,
             toolUsed: attackReport.toolUsed,
-            payloadSnippet: attackReport.payloadSnippet
+            payloadSnippet: attackReport.payloadSnippet,
+            sourceType: attackReport.sourceType
         };
 
         // Fire and forget log request (internal absolute URL required in middleware fetch)

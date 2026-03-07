@@ -18,6 +18,8 @@ interface WAFEvent {
     threatLevel?: string;
     toolUsed?: string;
     payloadSnippet?: string;
+    attackLabel?: string;
+    sourceType?: string;
 }
 
 export default function HackingLogsPage() {
@@ -166,6 +168,11 @@ export default function HackingLogsPage() {
                                                     <span className="text-gray-900 dark:text-white font-medium text-wrap">
                                                         {ev.source}
                                                     </span>
+                                                    {ev.attackLabel && ev.attackLabel !== ev.source && (
+                                                        <span className="text-xs text-orange-500 dark:text-orange-400 mt-0.5 text-wrap font-medium">
+                                                            {ev.attackLabel}
+                                                        </span>
+                                                    )}
                                                     {(ev.toolUsed || ev.userAgent || ev.ruleId) && (
                                                         <span className={`text-xs mt-1 truncate ${ev.toolUsed && (ev.toolUsed.includes('MAP') || ev.toolUsed.includes('SCAN')) ? 'text-red-500 font-bold' : 'text-gray-500 dark:text-slate-400'}`} title={ev.toolUsed || ev.userAgent}>
                                                             <span className="material-symbols-outlined text-[12px] align-text-bottom mr-1 px-0">{ev.isCustomWaf ? 'bug_report' : 'fingerprint'}</span>
