@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import AdminHeader from "@/components/admin/AdminHeader";
 
 interface WAFEvent {
     // Cloudflare specific
@@ -61,8 +60,8 @@ export default function HackingLogsPage() {
                 <div className="flex flex-col gap-1 items-start">
                     <span className="bg-red-600/20 text-red-600 dark:text-red-400 border border-red-600/30 px-2 py-1 rounded text-xs font-bold uppercase">Blocked (App)</span>
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold tracking-wider ${ev.threatLevel === 'CRITICAL' ? 'bg-red-500 text-white' :
-                            ev.threatLevel === 'HIGH' ? 'bg-orange-500 text-white' :
-                                'bg-yellow-500 text-white'
+                        ev.threatLevel === 'HIGH' ? 'bg-orange-500 text-white' :
+                            'bg-yellow-500 text-white'
                         }`}>{ev.threatLevel}</span>
                 </div>
             );
@@ -82,9 +81,7 @@ export default function HackingLogsPage() {
     };
 
     return (
-        <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-[#0b0f17] transition-colors">
-            <AdminHeader />
-
+        <>
             <main className="flex-1 p-4 sm:p-6 lg:p-8 w-full max-w-[1400px] mx-auto">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                     <div>
@@ -197,6 +194,6 @@ export default function HackingLogsPage() {
                     </div>
                 </div>
             </main>
-        </div>
+        </>
     );
 }
