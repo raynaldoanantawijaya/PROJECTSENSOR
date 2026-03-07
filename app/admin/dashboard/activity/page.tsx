@@ -43,9 +43,16 @@ export default function AdminActivityPage() {
         if (confirm(`Apakah Anda yakin ingin me-reset (Logout paksa) semua perangkat untuk user ${targetUser.username}?`)) {
             try {
                 const updatedUser = { ...targetUser, activeSessions: [] };
-                await storageService.saveUser(updatedUser);
-                setUsers(users.map(u => u.id === userId ? updatedUser : u));
-                alert("Sesi berhasil di-reset. User sekarang bisa login dari perangkat baru.");
+                const { saveUserAction } = await import('@/app/actions/admin-actions');
+                const res = await saveUserAction(updatedUser);
+
+                if (res.success) {
+                    setUsers(users.map(u => u.id === userId ? updatedUser : u));
+                    alert("Sesi berhasil di-reset. User sekarang bisa login dari perangkat baru.");
+                } else {
+                    console.error("Gagal reset sesi:", res.error);
+                    alert("Gagal me-reset sesi: " + res.error);
+                }
             } catch (error) {
                 console.error("Gagal reset sesi:", error);
                 alert("Gagal me-reset sesi.");
@@ -56,25 +63,18 @@ export default function AdminActivityPage() {
     const handleClearAllLogs = async () => {
         if (!confirm('Apakah Anda yakin ingin menghapus SEMUA log aktivitas? Tindakan ini tidak bisa dikembalikan.')) return;
         try {
-            const activityRef = collection(db, 'user_activity');
-            const allDocs = await getDocs(activityRef);
-            // Use batch delete (max 500 per batch)
-            let batch = writeBatch(db);
-            let count = 0;
-            for (const docSnap of allDocs.docs) {
-                batch.delete(docSnap.ref);
-                count++;
-                if (count % 400 === 0) {
-                    await batch.commit();
-                    batch = writeBatch(db);
-                }
+            const { clearLogsAction } = await import('@/app/actions/admin-actions');
+            const res = await clearLogsAction();
+
+            if (res.success) {
+                setLogs([]);
+                alert('Semua log aktivitas berhasil dihapus.');
+            } else {
+                alert('Gagal menghapus log: ' + res.error);
             }
-            await batch.commit();
-            setLogs([]);
-            alert(`Berhasil menghapus ${count} log aktivitas.`);
         } catch (error) {
-            console.error('Gagal menghapus log:', error);
-            alert('Gagal menghapus log.');
+            console.error("Failed to clear logs:", error);
+            alert('Terjadi kesalahan saat menghapus log.');
         }
     };
 

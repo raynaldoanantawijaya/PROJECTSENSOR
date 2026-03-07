@@ -162,3 +162,42 @@ export async function getActivityLogsAction(): Promise<{ success: boolean; data?
         return { success: false, error: e.message };
     }
 }
+
+export async function clearLogsAction(): Promise<{ success: boolean; error?: string }> {
+    const caller = await verifyStrictAdminSession();
+    if (!caller) return { success: false, error: "Unauthorized" };
+
+    const isCommander = caller.email?.toLowerCase() === COMMANDER_EMAIL.toLowerCase();
+
+    // Only allow commander or admins with edit permissions to clear logs
+    if (!isCommander && !caller.canEdit) {
+        return { success: false, error: "Access Denied: You do not have edit permissions." };
+    }
+
+    try {
+        const db = getAdminFirestore();
+        const bulkWriter = db.bulkWriter();
+        const activityRef = db.collection('user_activity');
+        const snapshot = await activityRef.get();
+
+        snapshot.docs.forEach((doc) => {
+            bulkWriter.delete(doc.ref);
+        });
+
+        await bulkWriter.close();
+
+        // Log the clear action itself (ironic, but good for audit trailing the new state)
+        db.collection('user_activity').add({
+            userId: caller.uid,
+            username: caller.email,
+            action: 'CLEAR_LOGS',
+            details: 'Cleared all system activity logs',
+            timestamp: new Date()
+        });
+
+        return { success: true };
+    } catch (error: any) {
+        console.error("clearLogsAction Error:", error);
+        return { success: false, error: error.message };
+    }
+}
