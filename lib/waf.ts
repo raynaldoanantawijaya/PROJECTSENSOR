@@ -32,6 +32,8 @@ export const THREAT_PATTERNS: { type: string; regex: RegExp; label: string }[] =
     { type: 'SQL_INJECTION', regex: /(?:'|%27|"|%22)\s*(?:OR|AND)\s/i, label: "SQLi: OR/AND tautology" },
     { type: 'SQL_INJECTION', regex: /(?:1\s*=\s*1|'='|'=')/i, label: "SQLi: Always-true condition (1=1)" },
     { type: 'SQL_INJECTION', regex: /UNION\s+(ALL\s+)?SELECT/i, label: "SQLi: UNION SELECT" },
+    { type: 'SQL_INJECTION', regex: /UNION(%20|\+)+(ALL(%20|\+)+)?SELECT/i, label: "SQLi: UNION SELECT (encoded)" },
+    { type: 'SQL_INJECTION', regex: /SELECT\s+.{0,50}\s+FROM\s+\w/i, label: "SQLi: SELECT FROM query" },
     { type: 'SQL_INJECTION', regex: /(?:SLEEP|BENCHMARK|WAITFOR\s+DELAY)\s*\(/i, label: "SQLi: Time-based blind" },
     { type: 'SQL_INJECTION', regex: /@@(?:version|datadir|hostname|basedir)/i, label: "SQLi: Server variable probe" },
     { type: 'SQL_INJECTION', regex: /(?:DROP|ALTER|TRUNCATE|DELETE\s+FROM)\s+\w/i, label: "SQLi: Destructive query" },
