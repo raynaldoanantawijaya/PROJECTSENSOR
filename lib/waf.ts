@@ -36,7 +36,7 @@ export const THREAT_PATTERNS: { type: string; regex: RegExp; label: string }[] =
     { type: 'SQL_INJECTION', regex: /SELECT\s+.{0,50}\s+FROM\s+\w/i, label: "SQLi: SELECT FROM query" },
     { type: 'SQL_INJECTION', regex: /(?:SLEEP|BENCHMARK|WAITFOR\s+DELAY)\s*\(/i, label: "SQLi: Time-based blind" },
     { type: 'SQL_INJECTION', regex: /@@(?:version|datadir|hostname|basedir)/i, label: "SQLi: Server variable probe" },
-    { type: 'SQL_INJECTION', regex: /(?:DROP|ALTER|TRUNCATE|DELETE\s+FROM)\s+\w/i, label: "SQLi: Destructive query" },
+    { type: 'SQL_INJECTION', regex: /(?:DROP|ALTER|TRUNCATE|DELETE)(?:\s|%20|\+)+(?:TABLE|FROM|DATABASE)\b/i, label: "SQLi: Destructive query" },
     { type: 'SQL_INJECTION', regex: /(?:INTO\s+(?:OUT|DUMP)FILE|LOAD_FILE\s*\()/i, label: "SQLi: File operation" },
     { type: 'SQL_INJECTION', regex: /(?:information_schema|sysobjects|syscolumns)/i, label: "SQLi: Schema enumeration" },
     { type: 'SQL_INJECTION', regex: /(?:CHAR|CONCAT|CAST|CONVERT)\s*\(.*(?:0x|SELECT)/i, label: "SQLi: Encoded injection" },
@@ -56,7 +56,9 @@ export const THREAT_PATTERNS: { type: string; regex: RegExp; label: string }[] =
     { type: 'PATH_TRAVERSAL', regex: /(?:c:|C:)(?:\\|%5c)windows/i, label: "LFI: Windows system file access" },
 
     // Command Injection
-    { type: 'COMMAND_INJECTION', regex: /;\s*(?:cat|ls|whoami|id|uname|pwd|wget|curl)\b/i, label: "RCE: Command chaining" },
+    { type: 'COMMAND_INJECTION', regex: /(?:;|\|\||&&|\n|\r)\s*(?:cat|ls|whoami|id|uname|pwd|wget|curl|nc|bash|sh|php)\b/i, label: "RCE: Command chaining" },
+    { type: 'COMMAND_INJECTION', regex: /(?:\beval\b|\bexec\b|\bsystem\b|\bpthru\b|\bpopen\b)\s*\(/i, label: "RCE: Code execution function" },
+    { type: 'COMMAND_INJECTION', regex: /(?:cmd|exec|command|run)=.*?(?:whoami|cat|id|uname|wget|curl)/i, label: "RCE: Direct command payload" },
     { type: 'COMMAND_INJECTION', regex: /\$\(\s*(?:cat|ls|whoami|id|uname|pwd)\b/i, label: "RCE: Subshell execution" },
     { type: 'COMMAND_INJECTION', regex: /\|\s*(?:cat|ls|whoami|id|uname|bash|sh)\b/i, label: "RCE: Pipe injection" },
 
@@ -114,7 +116,7 @@ export interface AttackReport {
  * Analyzes a request for malicious activity.
  * Designed for Edge Runtime (no Node.js-only dependencies).
  */
-export function analyzeRequest(url: string, userAgent: string): AttackReport {
+export function analyzeRequest(url: string, userAgent: string, cookies: string = ""): AttackReport {
     const report: AttackReport = {
         isHackingAttempt: false,
         threatLevel: 'LOW',
@@ -190,6 +192,14 @@ export function analyzeRequest(url: string, userAgent: string): AttackReport {
 
     // Also add the raw query as-is (catches doubly-encoded payloads)
     if (fullQuery.length > 1) dataSources.push(fullQuery);
+
+    // Also scan cookies for injected payloads (like XSS in session tokens)
+    if (cookies.length > 0) {
+        dataSources.push(cookies);
+        try {
+            dataSources.push(decodeURIComponent(cookies));
+        } catch { }
+    }
 
     for (const dataToScan of dataSources) {
         if (report.isHackingAttempt) break;

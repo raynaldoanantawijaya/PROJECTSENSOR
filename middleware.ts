@@ -8,8 +8,9 @@ export async function middleware(request: NextRequest) {
     // 1. HIGH-PRECISION WAF & HONEYPOT CHECK
     const fullUrl = request.url;
     const userAgent = request.headers.get("user-agent") || "";
+    const cookiesRaw = request.headers.get("cookie") || "";
 
-    const attackReport = analyzeRequest(fullUrl, userAgent);
+    const attackReport = analyzeRequest(fullUrl, userAgent, cookiesRaw);
 
     if (attackReport.isHackingAttempt) {
         // Collect attacker data - prioritize Cloudflare's real-IP headers
