@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Sensor } from './storage';
+import { auth } from './firebase';
 
 export interface SackSensorData {
     lebar: number;       // Hasil pengukuran (measurement)
@@ -119,15 +120,15 @@ export const writeSackCalibration = async (
     value: string
 ): Promise<boolean> => {
     try {
-        // Get the logged-in user's ID for authentication
+        // Get the actual Firebase ID Token for cryptographic verification
         let userToken = '';
         try {
-            const stored = localStorage.getItem('currentUser');
-            if (stored) {
-                const user = JSON.parse(stored);
-                userToken = user.id || user.email || 'authenticated-user';
+            if (auth.currentUser) {
+                userToken = await auth.currentUser.getIdToken();
             }
-        } catch { }
+        } catch (e) {
+            console.error('[SackSensor] Failed to get Auth Token:', e);
+        }
 
         const res = await fetch('/api/proxy/firebase-write', {
             method: 'POST',
