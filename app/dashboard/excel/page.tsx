@@ -16,14 +16,15 @@ export default function ExcelPreviewPage() {
 
     useEffect(() => {
         const init = async () => {
-            setSensors(await storageService.getSensors());
+            const { fetchDashboardData } = await import('@/lib/dashboard-data');
+            const { sensors, users } = await fetchDashboardData('both');
+            setSensors(sensors);
 
             const storedUserJSON = localStorage.getItem('currentUser');
             if (storedUserJSON) {
                 try {
                     const sessionUser = JSON.parse(storedUserJSON);
-                    const allUsers = await storageService.getUsers();
-                    const freshUser = allUsers.find(u => u.id === sessionUser.id);
+                    const freshUser = users.find(u => u.id === sessionUser.id);
                     setUser(freshUser || sessionUser);
                 } catch (e) {
                     console.error("Failed to parse user");

@@ -39,7 +39,8 @@ export default function SpeedSensorDetail({ params }: { params: Promise<{ id: st
     // 1. Fetch Sensor Metadata (Instant from cache)
     useEffect(() => {
         const fetchSensor = async () => {
-            const sensors = await storageService.getSensors();
+            const { fetchDashboardData } = await import('@/lib/dashboard-data');
+            const { sensors } = await fetchDashboardData('sensors');
             const found = sensors.find(s => s.id === id);
 
             if (found) {

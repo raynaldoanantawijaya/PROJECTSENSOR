@@ -4,7 +4,8 @@ import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { storageService } from "@/lib/storage";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 
 export default function DashboardLayout({
     children,
@@ -17,10 +18,6 @@ export default function DashboardLayout({
     const [authorized, setAuthorized] = useState(false);
 
     useEffect(() => {
-        storageService.init();
-        storageService.getUsers(); // Pre-warm cache for other components
-        storageService.getSensors(); // Pre-warm cache for other components
-
         const storedUser = localStorage.getItem('currentUser');
         const loginTimestamp = localStorage.getItem('loginTimestamp');
         const EIGHT_HOURS_MS = 8 * 60 * 60 * 1000;
@@ -60,8 +57,19 @@ export default function DashboardLayout({
                 const user = JSON.parse(userStr);
                 if (!user?.email) return;
 
-                // Force-refresh to get the latest Firestore data (bypass cache)
-                const users = await storageService.getUsers(true);
+                // Use the secure API endpoint to get fresh user data
+                const firebaseUser = auth.currentUser;
+                if (!firebaseUser) return;
+
+                const idToken = await firebaseUser.getIdToken();
+                const res = await fetch('/api/dashboard-data?type=users', {
+                    headers: { 'Authorization': `Bearer ${idToken}` }
+                });
+
+                if (!res.ok) return;
+                const data = await res.json();
+                const users = data.users || [];
+
                 const latestUser = users.find(
                     (u: any) => u.email.toLowerCase() === user.email.toLowerCase()
                 );

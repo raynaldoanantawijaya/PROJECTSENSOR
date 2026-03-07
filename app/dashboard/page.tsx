@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { storageService, Sensor, User } from "@/lib/storage";
+import { Sensor, User } from "@/lib/storage";
 import { useRouter } from "next/navigation";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 
 export default function DashboardHome() {
     const router = useRouter();
@@ -12,33 +14,52 @@ export default function DashboardHome() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const init = async () => {
-            const storedUser = localStorage.getItem('currentUser');
-            if (!storedUser) {
-                router.push('/');
+        const storedUser = localStorage.getItem('currentUser');
+        if (!storedUser) {
+            router.push('/');
+            return;
+        }
+
+        // Set user from localStorage immediately for UI
+        const sessionUser = JSON.parse(storedUser);
+        setUser(sessionUser);
+
+        // Wait for Firebase Auth to be ready, then fetch fresh data from API
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            if (!firebaseUser) {
+                setIsLoading(false);
                 return;
             }
 
             try {
-                // Since Layout pre-warms the cache, these are instant memory reads
-                const allUsers = await storageService.getUsers();
-                const sessionUser = JSON.parse(storedUser);
-                const freshUser = allUsers.find(u => u.id === sessionUser.id);
-                setUser(freshUser || sessionUser);
-
-                const sensors = await storageService.getSensors();
-                setCounts({
-                    speed: sensors.filter(s => s.type === 'speed').length,
-                    sack: sensors.filter(s => s.type === 'sack').length,
-                    kwh: sensors.filter(s => s.type === 'kwh').length
+                const idToken = await firebaseUser.getIdToken();
+                const res = await fetch('/api/dashboard-data?type=both', {
+                    headers: { 'Authorization': `Bearer ${idToken}` }
                 });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    const sensors: Sensor[] = data.sensors || [];
+                    const users: User[] = data.users || [];
+
+                    // Update user with fresh data
+                    const freshUser = users.find(u => u.id === sessionUser.id);
+                    if (freshUser) setUser(freshUser);
+
+                    setCounts({
+                        speed: sensors.filter(s => s.type === 'speed').length,
+                        sack: sensors.filter(s => s.type === 'sack').length,
+                        kwh: sensors.filter(s => s.type === 'kwh').length
+                    });
+                }
             } catch (e) {
                 console.error("Dashboard init error:", e);
             } finally {
                 setIsLoading(false);
             }
-        };
-        init();
+        });
+
+        return () => unsubscribe();
     }, [router]);
 
     if (isLoading) return null; // or a loading spinner

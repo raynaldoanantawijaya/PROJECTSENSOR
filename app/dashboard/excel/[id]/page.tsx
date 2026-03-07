@@ -20,8 +20,8 @@ export default function ExcelDetail() {
         const init = async () => {
             try {
                 setIsLoading(true);
-                await storageService.init();
-                const sensors = await storageService.getSensors();
+                const { fetchDashboardData } = await import('@/lib/dashboard-data');
+                const { sensors } = await fetchDashboardData('sensors');
                 const currentSensor = sensors.find(s => s.id === id);
 
                 if (currentSensor) {

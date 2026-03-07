@@ -40,7 +40,8 @@ export default function KwhSensorDetail({ params }: { params: Promise<{ id: stri
     useEffect(() => {
         const fetchSensor = async () => {
             // Instant cache read
-            const sensors = await storageService.getSensors();
+            const { fetchDashboardData } = await import('@/lib/dashboard-data');
+            const { sensors } = await fetchDashboardData('sensors');
             const found = sensors.find(s => s.id === id);
 
             if (found) {
