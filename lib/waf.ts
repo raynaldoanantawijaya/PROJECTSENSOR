@@ -55,36 +55,102 @@ export const THREAT_PATTERNS: { type: string; regex: RegExp; label: string }[] =
     { type: 'PATH_TRAVERSAL', regex: /\/etc\/(?:passwd|shadow|hosts)/i, label: "LFI: Linux system file access" },
     { type: 'PATH_TRAVERSAL', regex: /(?:c:|C:)(?:\\|%5c)windows/i, label: "LFI: Windows system file access" },
 
-    // Command Injection
+    // Command Injection & RCE
     { type: 'COMMAND_INJECTION', regex: /(?:;|\|\||&&|\n|\r)\s*(?:cat|ls|whoami|id|uname|pwd|wget|curl|nc|bash|sh|php)\b/i, label: "RCE: Command chaining" },
     { type: 'COMMAND_INJECTION', regex: /(?:\beval\b|\bexec\b|\bsystem\b|\bpthru\b|\bpopen\b)\s*\(/i, label: "RCE: Code execution function" },
     { type: 'COMMAND_INJECTION', regex: /(?:cmd|exec|command|run)=.*?(?:whoami|cat|id|uname|wget|curl)/i, label: "RCE: Direct command payload" },
     { type: 'COMMAND_INJECTION', regex: /\$\(\s*(?:cat|ls|whoami|id|uname|pwd)\b/i, label: "RCE: Subshell execution" },
     { type: 'COMMAND_INJECTION', regex: /\|\s*(?:cat|ls|whoami|id|uname|bash|sh)\b/i, label: "RCE: Pipe injection" },
 
-    // SSRF
-    { type: 'SSRF', regex: /(?:127\.0\.0\.1|localhost|0\.0\.0\.0|169\.254\.169\.254)/i, label: "SSRF: Internal IP access" },
+    // SSRF & Cloud Metadata
+    { type: 'SSRF', regex: /(?:127\.0\.0\.1|localhost|0\.0\.0\.0|169\.254\.169\.254|metadata\.google\.internal)/i, label: "SSRF: Internal/Cloud IP access" },
+
+    // NoSQL Injection (MongoDB, CouchDB, etc.)
+    { type: 'NOSQL_INJECTION', regex: /\{\s*"\$ne"\s*:/i, label: "NoSQLi: $ne operator" },
+    { type: 'NOSQL_INJECTION', regex: /\{\s*"\$(?:gt|gte|lt|lte|in|nin)"\s*:/i, label: "NoSQLi: Comparison operator" },
+    { type: 'NOSQL_INJECTION', regex: /\$where\s*:/i, label: "NoSQLi: $where clause" },
+
+    // Server-Side Template Injection (SSTI)
+    { type: 'SSTI', regex: /\{\{.*(?:config|items|request|session).*\}\}/i, label: "SSTI: Payload injection ({{...}})" },
+    { type: 'SSTI', regex: /\$\{(?:jndi|config|sys|env).*?\}/i, label: "SSTI: EL/JNDI injection (${...})" },
+    { type: 'SSTI', regex: /<%(?:=|).*(?:java|lang|Runtime|exec).*?%>/i, label: "SSTI: Java/JSP injection" },
+
+    // XML External Entity (XXE)
+    { type: 'XXE', regex: /<!ENTITY\s+[^>]+SYSTEM\s+['"]/i, label: "XXE: External system entity" },
+    { type: 'XXE', regex: /<!DOCTYPE\s+[^>]+\[/i, label: "XXE: DOCTYPE declaration" },
+
+    // LDAP & XPath Injection
+    { type: 'LDAP_INJECTION', regex: /\(\s*\|\s*\(\s*\w+\s*=/i, label: "LDAPi: OR logic injection" },
+    { type: 'LDAP_INJECTION', regex: /\*\)\s*\(\s*\w+\s*=\s*\*/i, label: "LDAPi: Wildcard bypass" },
+    { type: 'XPATH_INJECTION', regex: /']\s*\||\s*or\s+.*='.*?/i, label: "XPath: OR condition bypass" },
+
+    // Deserialization / Object Injection (PHP, Java)
+    { type: 'DESERIALIZATION', regex: /O:\d+:"[^"]+":\d+:/i, label: "PHP Object Injection" },
+    { type: 'DESERIALIZATION', regex: /rO0ABX[A-Za-z0-9+/=]+/i, label: "Java Deserialization (Base64 Magic)" },
 ];
 
 // 3. Known Hacker Tools / Scanners (User-Agents)
 // Only flag clearly malicious automated tools, not generic HTTP clients
 export const KNOWN_SCANNER_TOOLS: { pattern: string; label: string }[] = [
+    // --- SQL & DB Scanners ---
     { pattern: 'sqlmap', label: 'SQLMap (SQL Injection Scanner)' },
-    { pattern: 'nmap', label: 'Nmap (Network Scanner)' },
+    { pattern: 'havij', label: 'Havij (SQL Injection Tool)' },
+    { pattern: 'pangolin', label: 'Pangolin (SQL Injection Scanner)' },
+    { pattern: 'bsqlbf', label: 'Blind SQL Brute Forcer' },
+
+    // --- Vulnerability Scanners & Proxies ---
     { pattern: 'nikto', label: 'Nikto (Web Vulnerability Scanner)' },
     { pattern: 'zmeu', label: 'ZmEu (Exploit Scanner)' },
-    { pattern: 'dirbuster', label: 'DirBuster (Directory Bruteforcer)' },
-    { pattern: 'gobuster', label: 'GoBuster (Directory Bruteforcer)' },
-    { pattern: 'masscan', label: 'Masscan (Port Scanner)' },
     { pattern: 'acunetix', label: 'Acunetix (Vulnerability Scanner)' },
     { pattern: 'nessus', label: 'Nessus (Vulnerability Scanner)' },
     { pattern: 'openvas', label: 'OpenVAS (Vulnerability Scanner)' },
     { pattern: 'w3af', label: 'w3af (Web Attack Framework)' },
-    { pattern: 'havij', label: 'Havij (SQL Injection Tool)' },
-    { pattern: 'commix', label: 'Commix (Command Injection Tool)' },
+    { pattern: 'netsparker', label: 'Netsparker (Web Scanner)' },
+    { pattern: 'appscan', label: 'IBM AppScan' },
+    { pattern: 'arachni', label: 'Arachni (Web Scanner)' },
+    { pattern: 'burp', label: 'Burp Suite (Web Proxy/Scanner)' },
+    { pattern: 'zaproxy', label: 'OWASP ZAP (Web Scanner)' },
+    { pattern: 'nuclei', label: 'Nuclei (Targeted Vulnerability Scanner)' },
+    { pattern: 'qualys', label: 'Qualys WAS' },
+    { pattern: 'tenable', label: 'Tenable (Vulnerability Scanner)' },
+
+    // --- Directory & File Bruteforcers ---
+    { pattern: 'dirbuster', label: 'DirBuster (Directory Bruteforcer)' },
+    { pattern: 'gobuster', label: 'GoBuster (Directory Bruteforcer)' },
+    { pattern: 'ffuf', label: 'Ffuf (Fast Web Fuzzer)' },
+    { pattern: 'wfuzz', label: 'Wfuzz (Web Fuzzer)' },
+    { pattern: 'dirb', label: 'Dirb (Web Content Scanner)' },
+
+    // --- Reconnaissance & Info Gathering ---
+    { pattern: 'nmap', label: 'Nmap (Network Scanner)' },
+    { pattern: 'masscan', label: 'Masscan (Port Scanner)' },
+    { pattern: 'zgrab', label: 'ZGrab (Application Scanner)' },
+    { pattern: 'whatweb', label: 'WhatWeb (Nextgen Web Scanner)' },
+    { pattern: 'wappalyzer', label: 'Wappalyzer (Tech Profiler)' },
+    { pattern: 'amass', label: 'Amass (Network Mapping)' },
+    { pattern: 'sublist3r', label: 'Sublist3r (Subdomain Enum)' },
+
+    // --- CMS & Specific Exploits ---
     { pattern: 'wpscan', label: 'WPScan (WordPress Scanner)' },
+    { pattern: 'droopescan', label: 'Droopescan (CMS Scanner)' },
+    { pattern: 'joomscan', label: 'JoomScan (Joomla Scanner)' },
+    { pattern: 'commix', label: 'Commix (Command Injection Tool)' },
     { pattern: 'jbrofuzz', label: 'JBroFuzz (Fuzzer)' },
+
+    // --- Frameworks & Exploitation Bots ---
     { pattern: 'metasploit', label: 'Metasploit (Exploit Framework)' },
+    { pattern: 'cobaltstrike', label: 'Cobalt Strike (Threat Emulation)' },
+    { pattern: 'empire', label: 'PowerShell Empire' },
+    { pattern: 'hydra', label: 'THC-Hydra (Network Bruteforcer)' },
+    { pattern: 'patator', label: 'Patator (Bruteforcer)' },
+
+    // --- Generic Automated/Scripting Tools (Often Malicious in large volumes) ---
+    // Note: Use caution with generic ones if API clients need them
+    { pattern: 'python-requests', label: 'Python Requests (Automated Script)' },
+    { pattern: 'go-http-client', label: 'Go HTTP Client (Automated Bot)' },
+    { pattern: 'python-urllib', label: 'Python Urllib (Automated Script)' },
+    { pattern: 'libwww-perl', label: 'Perl libwww (Automated Script)' },
+    { pattern: 'java/', label: 'Java Default Client (Automated Bot)' },
 ];
 
 // 4. Cloudflare Rule ID to Human Readable (Common Managed Rules)
