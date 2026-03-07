@@ -5,7 +5,7 @@ import { Sensor, User } from "@/lib/storage";
 // Simple in-memory cache to avoid redundant API calls across components
 let cachedResult: { sensors: Sensor[]; users: User[] } | null = null;
 let cacheTime = 0;
-const CACHE_TTL = 5000; // 5 seconds
+const CACHE_TTL = 30000; // 30 seconds — sensor data doesn't change often
 
 /**
  * Waits for Firebase Auth to be ready (max 3 seconds).
@@ -49,7 +49,8 @@ export async function fetchDashboardData(type: 'sensors' | 'users' | 'both' = 'b
 
     try {
         const idToken = await firebaseUser.getIdToken();
-        const res = await fetch(`/api/dashboard-data?type=${type}`, {
+        // Always fetch both to maximize cache hits across components
+        const res = await fetch('/api/dashboard-data?type=both', {
             headers: { 'Authorization': `Bearer ${idToken}` }
         });
 
