@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, use, useMemo, useRef } from "react";
-import { storageService, Sensor } from '@/lib/storage';
+import { Sensor } from '@/lib/storage';
 import { useSackSensorData, writeSackCalibration } from "@/lib/useSackSensorData";
 
 export default function SackSensorDetail({ params }: { params: Promise<{ id: string }> }) {
@@ -37,7 +37,9 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
                 targetValue: key === 'target' ? val : targetVal,
                 tolerance: key === 'tolerance' ? val : toleranceVal
             };
-            await storageService.saveSensor(updatedSensor);
+            // Use Server Action to save sensor config (bypasses blocked Client SDK)
+            const { saveSensorAction } = await import('@/app/actions/admin-actions');
+            await saveSensorAction(updatedSensor);
 
             // Log the edit activity
             import('@/lib/activity-logger').then(({ logUserActivity }) => {
@@ -73,32 +75,27 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
         return () => document.removeEventListener("visibilitychange", handleVis);
     }, []);
 
-    // 1. Realtime Sensor Listener (syncs target/tolerance across all devices)
+    // 1. Fetch sensor data from backend API
     useEffect(() => {
-        let unsubscribe: (() => void) | null = null;
-        const setup = async () => {
-            // Already initialized + pre-warmed by Layout
-            unsubscribe = storageService.onSensorChange(id, (found) => {
-                if (found) {
-                    setSensor(found);
-                    // Only update inputs if NOT currently saving (avoid overwriting user edits)
-                    if (!isSavingRef.current) {
-                        if (found.targetValue !== undefined) {
-                            setTargetVal(found.targetValue);
-                            setTargetInputVal(String(found.targetValue));
-                        }
-                        if (found.tolerance !== undefined) {
-                            setToleranceVal(found.tolerance);
-                            setToleranceInputVal(String(found.tolerance));
-                        }
-                    }
-                } else {
-                    setSensor({ id: 'err', name: 'Sensor Not Found', type: 'sack', status: 'inactive' });
+        const load = async () => {
+            const { fetchDashboardData } = await import('@/lib/dashboard-data');
+            const { sensors } = await fetchDashboardData('sensors');
+            const found = sensors.find(s => s.id === id);
+            if (found) {
+                setSensor(found);
+                if (found.targetValue !== undefined) {
+                    setTargetVal(found.targetValue);
+                    setTargetInputVal(String(found.targetValue));
                 }
-            });
+                if (found.tolerance !== undefined) {
+                    setToleranceVal(found.tolerance);
+                    setToleranceInputVal(String(found.tolerance));
+                }
+            } else {
+                setSensor({ id: 'err', name: 'Sensor Not Found', type: 'sack', status: 'inactive' });
+            }
         };
-        setup();
-        return () => { if (unsubscribe) unsubscribe(); };
+        load();
     }, [id]);
 
     // 2. SACK SENSOR DATA HOOK (multi-path)

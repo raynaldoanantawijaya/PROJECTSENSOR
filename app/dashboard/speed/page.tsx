@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { storageService, Sensor } from "@/lib/storage";
+import { Sensor } from "@/lib/storage";
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getDatabase, ref, onValue, off } from "firebase/database";
 

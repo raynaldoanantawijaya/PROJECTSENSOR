@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { storageService, Sensor } from "@/lib/storage";
+import { Sensor } from "@/lib/storage";
 import { useSackSensorData } from "@/lib/useSackSensorData";
 
 // Variant styles based on status/index

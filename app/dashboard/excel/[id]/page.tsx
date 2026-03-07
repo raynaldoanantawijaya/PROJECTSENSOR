@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
-import { storageService } from "@/lib/storage";
+// Sensor data loaded via fetchDashboardData
 
 export default function ExcelDetail() {
     const params = useParams();

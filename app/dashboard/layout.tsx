@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import DashboardLoadingSpinner from "@/components/DashboardLoadingSpinner";
 
 export default function DashboardLayout({
     children,
@@ -126,9 +127,11 @@ export default function DashboardLayout({
     }, [pathname, authorized]);
 
     if (!authorized) {
-        return <div className="min-h-screen bg-background-light dark:bg-background-dark flex items-center justify-center">
-            <div className="size-8 border-2 border-primary border-t-white rounded-full animate-spin"></div>
-        </div>;
+        return (
+            <div className="min-h-screen bg-background-light dark:bg-background-dark flex items-center justify-center">
+                <DashboardLoadingSpinner message="Memverifikasi sesi..." />
+            </div>
+        );
     }
 
     return (

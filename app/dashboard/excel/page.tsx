@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { storageService, Sensor, User } from "@/lib/storage";
+import { Sensor, User } from "@/lib/storage";
 
 const slugify = (text: string) => text.toLowerCase().replace(/\s+/g, '-');
 

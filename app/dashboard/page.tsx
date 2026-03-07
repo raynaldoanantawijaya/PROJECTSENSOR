@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Sensor, User } from "@/lib/storage";
 import { useRouter } from "next/navigation";
+import DashboardLoadingSpinner from "@/components/DashboardLoadingSpinner";
 
 export default function DashboardHome() {
     const router = useRouter();
@@ -45,7 +46,7 @@ export default function DashboardHome() {
         load();
     }, [router]);
 
-    if (isLoading) return null; // or a loading spinner
+    if (isLoading) return <DashboardLoadingSpinner message="Memuat dashboard..." />;
 
     return (
         <div className="max-w-7xl mx-auto space-y-8">

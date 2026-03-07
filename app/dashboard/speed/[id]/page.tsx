@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, use, useMemo } from "react";
-import { storageService, Sensor } from '@/lib/storage';
+import { Sensor } from '@/lib/storage';
 import { useSmartSensorData } from "@/lib/smart-sensor";
 
 interface SpeedData {
