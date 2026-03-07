@@ -31,20 +31,16 @@ export const authService = {
         localStorage.removeItem('loginTimestamp');
         localStorage.removeItem('currentAdmin');
 
-        // Clean session from Firestore (best effort — don't block logout if this fails)
+        // Clean session from backend (fire-and-forget — never block logout)
         if (userStr && sessionToken) {
             try {
                 const user = JSON.parse(userStr) as AppUser;
-                // Force-refresh from Firestore to get latest session list
-                const users = await storageService.getUsers(true);
-                const latestUser = users.find((u: AppUser) => u.email.toLowerCase() === user.email.toLowerCase());
-                if (latestUser && latestUser.activeSessions) {
-                    const updatedSessions = latestUser.activeSessions.filter((s: string) => s !== sessionToken);
-                    await storageService.saveUser({ ...latestUser, activeSessions: updatedSessions });
-                }
+                // Use dynamic import to call the Server Action
+                import('@/app/actions/auth-actions').then(({ cleanupSessionAction }) => {
+                    cleanupSessionAction(user.id, sessionToken).catch(() => { });
+                }).catch(() => { });
             } catch (e) {
-                console.error("Failed to clear session from Firestore on logout:", e);
-                // Don't block logout — user will be logged out locally regardless
+                // Don't block logout
             }
         }
 

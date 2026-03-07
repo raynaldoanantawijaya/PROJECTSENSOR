@@ -19,12 +19,7 @@ export default function LoginPage() {
 
     try {
       // Lazy load heavy Firebase modules only when login is clicked
-      const [{ authService }, { storageService }] = await Promise.all([
-        import("@/lib/auth"),
-        import("@/lib/storage"),
-      ]);
-
-      await storageService.init();
+      const { authService } = await import("@/lib/auth");
 
       // 1. Authenticate with Firebase Auth
       const cred = await authService.login(email, password);
@@ -45,15 +40,13 @@ export default function LoginPage() {
         if (sessionId) localStorage.setItem("sessionToken", sessionId);
         localStorage.setItem("loginTimestamp", Date.now().toString());
 
-        // Log the successful login
-        try {
-          const { logUserActivity } = await import('@/lib/activity-logger');
-          await logUserActivity('LOGIN', 'User logged into Dashboard');
-        } catch (e) {
-          console.error('Failed to log login activity', e);
-        }
-
+        // Navigate immediately — don't let anything block this
         router.push("/dashboard");
+
+        // Fire-and-forget: log activity WITHOUT awaiting (Client SDK writes may be blocked by rules)
+        import('@/lib/activity-logger').then(({ logUserActivity }) => {
+          logUserActivity('LOGIN', 'User logged into Dashboard').catch(() => { });
+        }).catch(() => { });
       } else {
         setError(
           "Login berhasil, tapi data profil tidak ditemukan di database."

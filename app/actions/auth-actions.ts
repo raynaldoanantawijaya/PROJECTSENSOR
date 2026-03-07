@@ -116,6 +116,25 @@ export async function getUserProfileLoginAction(idToken: string, oldSessionToken
     }
 }
 
+// Cleanup session token on logout (called from client-side fire-and-forget)
+export async function cleanupSessionAction(userId: string, sessionToken: string): Promise<{ success: boolean }> {
+    try {
+        const db = getAdminFirestore();
+        const userRef = db.collection("users").doc(userId);
+        const userDoc = await userRef.get();
+
+        if (userDoc.exists) {
+            const activeSessions: string[] = userDoc.data()?.activeSessions || [];
+            const updatedSessions = activeSessions.filter(s => s !== sessionToken);
+            await userRef.update({ activeSessions: updatedSessions });
+        }
+
+        return { success: true };
+    } catch (e) {
+        return { success: false };
+    }
+}
+
 // Used for sensitive writes (Create/Delete/Edit) - performs forced network revocation check
 export async function verifyStrictAdminSession() {
     const sessionCookie = (await cookies()).get("session")?.value;
