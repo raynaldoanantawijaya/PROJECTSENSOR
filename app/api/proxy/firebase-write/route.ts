@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAdminAuth } from '@/lib/firebase-admin';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,18 +13,32 @@ const ALLOWED_ORIGINS = [
 export async function POST(req: NextRequest) {
     try {
         // ============================================================
-        // LAYER 1: AUTHENTICATION
+        // LAYER 1: STRICT AUTHENTICATION
         // Accept EITHER:
         //   a) Admin session cookie (set by admin login)
-        //   b) X-User-Token header (set by regular dashboard users)
-        // This allows operators to use calibration features while
-        // still blocking completely unauthenticated external attacks.
+        //   b) X-User-Token header (Must be cryptographically verified)
         // ============================================================
         const session = req.cookies.get('session');
-        const userToken = req.headers.get('x-user-token');
-        if (!session?.value && !userToken) {
-            console.warn('[Firebase Write] REJECTED: No auth from', req.headers.get('x-forwarded-for') || 'unknown IP');
-            return NextResponse.json({ error: 'Unauthorized: No active session' }, { status: 401 });
+        let isAuthenticated = false;
+
+        if (session?.value) {
+            isAuthenticated = true; // Handled by Next.js session middleware or trusted origin
+        } else {
+            const userToken = req.headers.get('x-user-token');
+            if (userToken) {
+                try {
+                    const auth = getAdminAuth();
+                    await auth.verifyIdToken(userToken);
+                    isAuthenticated = true;
+                } catch (e: any) {
+                    console.error('[Firebase Write] Token Verification Failed:', e.message);
+                }
+            }
+        }
+
+        if (!isAuthenticated) {
+            console.warn('[Firebase Write] REJECTED: No valid auth from', req.headers.get('x-forwarded-for') || 'unknown IP');
+            return NextResponse.json({ error: 'Unauthorized: Invalid or missing session/token' }, { status: 401 });
         }
 
         // ============================================================
