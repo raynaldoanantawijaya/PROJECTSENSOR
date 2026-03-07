@@ -20,6 +20,8 @@ interface WAFEvent {
     payloadSnippet?: string;
     attackLabel?: string;
     sourceType?: string;
+    clientCity?: string;
+    clientRegion?: string;
 }
 
 export default function HackingLogsPage() {
@@ -156,7 +158,7 @@ export default function HackingLogsPage() {
                                                     <span className="text-gray-900 dark:text-white font-medium font-mono">{ev.clientIP}</span>
                                                     <span className="text-xs text-gray-500 dark:text-slate-400 flex items-center gap-1 mt-1">
                                                         <span className="material-symbols-outlined text-[14px]">public</span>
-                                                        {ev.clientCountryName || "Unknown"}
+                                                        {[ev.clientCity, ev.clientRegion, ev.clientCountryName].filter(Boolean).join(", ") || "Unknown"}
                                                     </span>
                                                 </div>
                                             </td>

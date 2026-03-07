@@ -14,9 +14,11 @@ export async function middleware(request: NextRequest) {
     const attackReport = analyzeRequest(fullUrl, userAgent);
 
     if (attackReport.isHackingAttempt) {
-        // Collect attacker data
-        const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "Unknown IP";
-        const country = request.headers.get("x-vercel-ip-country") || "Unknown";
+        // Collect attacker data - prioritize Cloudflare's real-IP headers over proxy IPs
+        const ip = request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "Unknown IP";
+        const country = request.headers.get("cf-ipcountry") || request.headers.get("x-vercel-ip-country") || "Unknown";
+        const city = request.headers.get("x-vercel-ip-city") || "";
+        const region = request.headers.get("x-vercel-ip-country-region") || "";
 
         // Asynchronously log the attack to our backend so we don't block the response time 
         // (but we immediately block the user)
@@ -24,6 +26,8 @@ export async function middleware(request: NextRequest) {
             datetime: new Date().toISOString(),
             clientIP: ip,
             clientCountryName: country,
+            clientCity: city,
+            clientRegion: region,
             action: 'block',
             ruleId: 'CUSTOM_WAF',
             source: attackReport.attackType,
