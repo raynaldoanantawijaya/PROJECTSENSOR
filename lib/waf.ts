@@ -28,8 +28,9 @@ export const HONEYPOT_PATHS = [
 // 2. High-Risk Payload Regexes (SQLi, XSS, Path Traversal)
 // Each pattern is carefully tuned to avoid false positives
 export const THREAT_PATTERNS: { type: string; regex: RegExp; label: string }[] = [
-    // SQL Injection - classic
-    { type: 'SQL_INJECTION', regex: /(?:'|%27)\s*(?:OR|AND)\s+(?:'|%27|\d)/i, label: "SQLi: OR/AND tautology" },
+    // SQL Injection - tautology and common probes
+    { type: 'SQL_INJECTION', regex: /(?:'|%27|"|%22)\s*(?:OR|AND)\s/i, label: "SQLi: OR/AND tautology" },
+    { type: 'SQL_INJECTION', regex: /(?:1\s*=\s*1|'='|'=')/i, label: "SQLi: Always-true condition (1=1)" },
     { type: 'SQL_INJECTION', regex: /UNION\s+(ALL\s+)?SELECT/i, label: "SQLi: UNION SELECT" },
     { type: 'SQL_INJECTION', regex: /(?:SLEEP|BENCHMARK|WAITFOR\s+DELAY)\s*\(/i, label: "SQLi: Time-based blind" },
     { type: 'SQL_INJECTION', regex: /@@(?:version|datadir|hostname|basedir)/i, label: "SQLi: Server variable probe" },
@@ -37,6 +38,7 @@ export const THREAT_PATTERNS: { type: string; regex: RegExp; label: string }[] =
     { type: 'SQL_INJECTION', regex: /(?:INTO\s+(?:OUT|DUMP)FILE|LOAD_FILE\s*\()/i, label: "SQLi: File operation" },
     { type: 'SQL_INJECTION', regex: /(?:information_schema|sysobjects|syscolumns)/i, label: "SQLi: Schema enumeration" },
     { type: 'SQL_INJECTION', regex: /(?:CHAR|CONCAT|CAST|CONVERT)\s*\(.*(?:0x|SELECT)/i, label: "SQLi: Encoded injection" },
+    { type: 'SQL_INJECTION', regex: /(?:ORDER\s+BY\s+\d{2,}|GROUP\s+BY\s+\d{2,})/i, label: "SQLi: Column enumeration" },
 
     // XSS
     { type: 'XSS', regex: /<\s*script[\s>]/i, label: "XSS: Script tag" },
