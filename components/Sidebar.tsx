@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { storageService, Sensor, User } from "@/lib/storage";
+import { Sensor, User } from "@/lib/storage";
 
 interface SidebarProps {
     isOpen?: boolean;
@@ -16,16 +16,16 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     const [user, setUser] = useState<User | null>(null);
 
     useEffect(() => {
-        // Since Layout pre-warms the cache, these are instant memory reads
         const init = async () => {
-            setSensors(await storageService.getSensors());
+            const { fetchDashboardData } = await import('@/lib/dashboard-data');
+            const { sensors, users } = await fetchDashboardData('both');
+            setSensors(sensors);
 
             const storedUserJSON = localStorage.getItem('currentUser');
             if (storedUserJSON) {
                 try {
                     const sessionUser = JSON.parse(storedUserJSON);
-                    const allUsers = await storageService.getUsers();
-                    const freshUser = allUsers.find(u => u.id === sessionUser.id);
+                    const freshUser = users.find(u => u.id === sessionUser.id);
                     setUser(freshUser || sessionUser);
                 } catch (e) {
                     console.error("Failed to parse user");

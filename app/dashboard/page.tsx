@@ -4,8 +4,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Sensor, User } from "@/lib/storage";
 import { useRouter } from "next/navigation";
-import { auth } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
 
 export default function DashboardHome() {
     const router = useRouter();
@@ -24,42 +22,27 @@ export default function DashboardHome() {
         const sessionUser = JSON.parse(storedUser);
         setUser(sessionUser);
 
-        // Wait for Firebase Auth to be ready, then fetch fresh data from API
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            if (!firebaseUser) {
-                setIsLoading(false);
-                return;
-            }
-
+        const load = async () => {
             try {
-                const idToken = await firebaseUser.getIdToken();
-                const res = await fetch('/api/dashboard-data?type=both', {
-                    headers: { 'Authorization': `Bearer ${idToken}` }
+                const { fetchDashboardData } = await import('@/lib/dashboard-data');
+                const { sensors, users } = await fetchDashboardData('both');
+
+                // Update user with fresh data
+                const freshUser = users.find(u => u.id === sessionUser.id);
+                if (freshUser) setUser(freshUser);
+
+                setCounts({
+                    speed: sensors.filter(s => s.type === 'speed').length,
+                    sack: sensors.filter(s => s.type === 'sack').length,
+                    kwh: sensors.filter(s => s.type === 'kwh').length
                 });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    const sensors: Sensor[] = data.sensors || [];
-                    const users: User[] = data.users || [];
-
-                    // Update user with fresh data
-                    const freshUser = users.find(u => u.id === sessionUser.id);
-                    if (freshUser) setUser(freshUser);
-
-                    setCounts({
-                        speed: sensors.filter(s => s.type === 'speed').length,
-                        sack: sensors.filter(s => s.type === 'sack').length,
-                        kwh: sensors.filter(s => s.type === 'kwh').length
-                    });
-                }
             } catch (e) {
                 console.error("Dashboard init error:", e);
             } finally {
                 setIsLoading(false);
             }
-        });
-
-        return () => unsubscribe();
+        };
+        load();
     }, [router]);
 
     if (isLoading) return null; // or a loading spinner

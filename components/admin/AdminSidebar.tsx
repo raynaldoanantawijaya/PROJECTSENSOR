@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { authService } from '@/lib/auth';
-import { storageService, User } from '@/lib/storage';
+import { User } from '@/lib/storage';
 
 interface AdminSidebarProps {
     isOpen?: boolean;
@@ -20,8 +20,10 @@ export default function AdminSidebar({ isOpen = false, onClose }: AdminSidebarPr
 
     React.useEffect(() => {
         const init = async () => {
-            await storageService.init();
-            const users = await storageService.getUsers();
+            // Use Server Action to get users (bypasses Firestore client rules)
+            const { getUsersAction } = await import('@/app/actions/admin-actions');
+            const usersResult = await getUsersAction();
+            const users: User[] = usersResult.success ? (usersResult.data as User[]) : [];
 
             authService.onAuthStateChanged((firebaseUser) => {
                 if (firebaseUser?.email) {
