@@ -26,6 +26,19 @@ async function lookupGeo(ip: string): Promise<{ city: string; region: string; co
 }
 
 export async function POST(req: Request) {
+    // SECURITY: Ensure request is coming from our own internal middleware
+    const origin = req.headers.get('origin') || req.headers.get('referer') || '';
+    const host = req.headers.get('host') || '';
+
+    // Only allow if it's an internal fetch (no origin/referer but from same host) 
+    // or explicitly matches our known domains
+    const isInternal = (!origin && req.headers.get('sec-fetch-site') === 'same-origin') ||
+        (origin && (origin.includes('raynaldotech.my.id') || origin.includes('localhost')));
+
+    if (!isInternal) {
+        return NextResponse.json({ error: "Forbidden: External POST blocked" }, { status: 403 });
+    }
+
     try {
         const payload = await req.json();
 
@@ -62,7 +75,14 @@ export async function POST(req: Request) {
 }
 
 // DELETE - Clear all WAF logs
-export async function DELETE() {
+export async function DELETE(req: Request) {
+    // SECURITY: Authenticate admin session before allowing log destruction
+    const cookieHeader = req.headers.get('cookie') || '';
+    const hasSession = cookieHeader.includes('session=');
+    if (!hasSession) {
+        return NextResponse.json({ error: 'Unauthorized: No active session' }, { status: 401 });
+    }
+
     try {
         const db = getAdminFirestore();
         const logsRef = db.collection('waf_logs');

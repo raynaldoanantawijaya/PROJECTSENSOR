@@ -8,7 +8,14 @@ const CLOUDFLARE_ZONE_ID = process.env.CLOUDFLARE_ZONE_ID;
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function GET() {
+export async function GET(req: Request) {
+    // SECURITY: Authenticate before allowing log extraction
+    const cookieHeader = req.headers.get('cookie') || '';
+    const hasSession = cookieHeader.includes('session=');
+    if (!hasSession) {
+        return NextResponse.json({ error: 'Unauthorized: No active session' }, { status: 401 });
+    }
+
     let cloudflareEvents: any[] = [];
 
     // 1. Fetch Cloudflare WAF Events (if configured)

@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     try {
         // CSRF Origin Guard
         const origin = req.headers.get('origin') || req.headers.get('referer') || '';
-        const isAllowedOrigin = ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed));
+        const isAllowedOrigin = ALLOWED_ORIGINS.includes(origin) || (!origin && req.headers.get('sec-fetch-site') === 'same-origin');
         if (!isAllowedOrigin) {
             console.warn('[Proxy] REJECTED: Origin mismatch:', origin);
             return NextResponse.json({ error: 'Forbidden: Cross-origin request blocked' }, { status: 403 });
@@ -66,6 +66,19 @@ export async function POST(req: NextRequest) {
             } else {
                 console.warn("[Proxy] Config Invalid: No {} brackets found.");
             }
+        }
+
+        // SECURITY: SSRF Protection
+        // Ensure the database URL is actually a Firebase database and not an internal network IP
+        try {
+            const dbUrlObj = new URL(databaseUrl);
+            const hostname = dbUrlObj.hostname;
+            if (!hostname.endsWith('.firebaseio.com') && !hostname.endsWith('.firebasedatabase.app')) {
+                console.error("[Proxy] SSRF BLOCKED: Invalid Firebase Domain:", hostname);
+                return NextResponse.json({ error: 'SSRF Blocked: Invalid Firebase Domain' }, { status: 400 });
+            }
+        } catch (e) {
+            return NextResponse.json({ error: 'Invalid databaseURL format' }, { status: 400 });
         }
 
         console.log(`[Proxy] DB SOURCE: ${usedSource} | URL: ${databaseUrl}`);

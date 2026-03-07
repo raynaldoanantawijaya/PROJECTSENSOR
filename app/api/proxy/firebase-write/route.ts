@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
         // Must originate from our own domain (prevents CSRF attacks)
         // ============================================================
         const origin = req.headers.get('origin') || req.headers.get('referer') || '';
-        const isAllowedOrigin = ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed));
+        const isAllowedOrigin = ALLOWED_ORIGINS.includes(origin) || (!origin && req.headers.get('sec-fetch-site') === 'same-origin');
         if (!isAllowedOrigin) {
             console.warn('[Firebase Write] REJECTED: Origin mismatch:', origin);
             return NextResponse.json({ error: 'Forbidden: Cross-origin request blocked' }, { status: 403 });
@@ -73,6 +73,19 @@ export async function POST(req: NextRequest) {
                     console.error("[Firebase Write] JSON Parse ERROR:", e.message);
                 }
             }
+        }
+
+        // SECURITY: SSRF Protection
+        // Ensure the database URL is actually a Firebase database and not an internal network IP
+        try {
+            const dbUrlObj = new URL(databaseUrl);
+            const hostname = dbUrlObj.hostname;
+            if (!hostname.endsWith('.firebaseio.com') && !hostname.endsWith('.firebasedatabase.app')) {
+                console.error("[Firebase Write] SSRF BLOCKED: Invalid Firebase Domain:", hostname);
+                return NextResponse.json({ error: 'SSRF Blocked: Invalid Firebase Domain' }, { status: 400 });
+            }
+        } catch (e) {
+            return NextResponse.json({ error: 'Invalid databaseURL format' }, { status: 400 });
         }
 
         const cleanBaseUrl = databaseUrl.replace(/\/+$/, '');
