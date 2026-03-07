@@ -1,6 +1,6 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { getAdminAuth, getAdminFirestore } from "@/lib/firebase-admin";
 
 interface CreateUserResult {
@@ -8,6 +8,47 @@ interface CreateUserResult {
     uid?: string;
     error?: string;
 }
+
+// --------------------------------------------------------------------------------
+// MEMORY RATE LIMITER
+// Prevents Brute-Force scanning even if Turnstile is somehow replayed or bypassed
+// --------------------------------------------------------------------------------
+const loginAttempts = new Map<string, { count: number; lockUntil: number }>();
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_MS = 5 * 60 * 1000; // 5 minutes
+
+function checkRateLimit(ip: string): { allowed: boolean; error?: string } {
+    const now = Date.now();
+    const record = loginAttempts.get(ip);
+
+    if (record) {
+        if (now < record.lockUntil) {
+            const minutesLeft = Math.ceil((record.lockUntil - now) / 60000);
+            return { allowed: false, error: `Too many failed attempts. Try again in ${minutesLeft} minutes.` };
+        }
+        // Reset if lock time passed
+        if (now > record.lockUntil && record.count >= MAX_ATTEMPTS) {
+            loginAttempts.delete(ip);
+        }
+    }
+    return { allowed: true };
+}
+
+function recordFailedAttempt(ip: string) {
+    const now = Date.now();
+    const record = loginAttempts.get(ip) || { count: 0, lockUntil: 0 };
+    record.count += 1;
+
+    if (record.count >= MAX_ATTEMPTS) {
+        record.lockUntil = now + LOCKOUT_MS;
+    }
+    loginAttempts.set(ip, record);
+}
+
+function clearAttempts(ip: string) {
+    loginAttempts.delete(ip);
+}
+// --------------------------------------------------------------------------------
 
 // Helper to verify session and role
 async function verifyAdminSession() {
@@ -159,37 +200,50 @@ async function verifyTurnstileToken(token: string): Promise<boolean> {
 
 export async function loginAdminAction(idToken: string, turnstileToken: string): Promise<{ success: boolean; error?: string }> {
     try {
-        // 0. Verify Turnstile
+        // --- 1. IP-Based Rate Limiting ---
+        const headersList = await headers();
+        const ipstr = headersList.get("x-forwarded-for") || headersList.get("cf-connecting-ip") || "unknown";
+        const ip = ipstr.split(',')[0].trim();
+
+        const limitCheck = checkRateLimit(ip);
+        if (!limitCheck.allowed) {
+            return { success: false, error: limitCheck.error || "Security Lockout. Try again later." };
+        }
+
+        // --- 2. Verify Turnstile ---
         const isHuman = await verifyTurnstileToken(turnstileToken);
         if (!isHuman) {
+            recordFailedAttempt(ip);
             return { success: false, error: "Security Check Failed. Please reload and try again." };
         }
 
         const auth = getAdminAuth();
 
-        // 1. Verify ID Token
+        // --- 3. Verify ID Token ---
         const decodedToken = await auth.verifyIdToken(idToken);
         const uid = decodedToken.uid;
 
-        // 2. Check Role in Firestore
+        // --- 4. Check Role in Firestore ---
         const db = getAdminFirestore();
         const userDoc = await db.collection("users").doc(uid).get();
 
         if (!userDoc.exists) {
+            recordFailedAttempt(ip);
             return { success: false, error: "User data not found in database." };
         }
 
         const userData = userDoc.data();
         const role = (userData?.role || "").toLowerCase();
         if (role !== 'admin' && role !== 'commander') {
+            recordFailedAttempt(ip);
             return { success: false, error: "Access Denied: You are not an admin." };
         }
 
-        // 3. Create Session Cookie (expires in 8 hours)
+        // --- 5. Create Session Cookie (expires in 8 hours) ---
         const expiresIn = 60 * 60 * 8 * 1000; // 8 hours
         const sessionCookie = await auth.createSessionCookie(idToken, { expiresIn });
 
-        // 4. Set Cookie
+        // --- 6. Set Cookie & Clear Attempts ---
         (await cookies()).set("session", sessionCookie, {
             maxAge: expiresIn,
             httpOnly: true,
@@ -198,9 +252,17 @@ export async function loginAdminAction(idToken: string, turnstileToken: string):
             sameSite: "lax",
         });
 
+        clearAttempts(ip); // Success! Reset rate limiter.
         return { success: true };
     } catch (error: any) {
         console.error("Login Action Error:", error);
+
+        // Also record generic auth failures as attempts
+        const headersList = await headers();
+        const ipstr = headersList.get("x-forwarded-for") || headersList.get("cf-connecting-ip") || "unknown";
+        const ip = ipstr.split(',')[0].trim();
+        recordFailedAttempt(ip);
+
         return { success: false, error: "Authentication failed. " + (error.message || "") };
     }
 }
