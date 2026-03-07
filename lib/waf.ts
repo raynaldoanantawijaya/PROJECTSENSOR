@@ -175,14 +175,22 @@ export function analyzeRequest(url: string, userAgent: string): AttackReport {
     }
 
     // --- STEP 3: Scan URL Query for attack payloads ---
-    let dataToScan = '';
+    // We scan BOTH the decoded AND raw query to catch encoded attacks
+    const dataSources: string[] = [];
+
+    // Add decoded version
     try {
-        dataToScan = decodeURIComponent(fullQuery);
+        const decoded = decodeURIComponent(fullQuery);
+        if (decoded.length > 1) dataSources.push(decoded);
     } catch {
-        dataToScan = fullQuery; // If decode fails, scan raw
+        // decodeURIComponent failed, add raw
     }
 
-    if (dataToScan.length > 1) { // Skip if just "?"
+    // Also add the raw query as-is (catches doubly-encoded payloads)
+    if (fullQuery.length > 1) dataSources.push(fullQuery);
+
+    for (const dataToScan of dataSources) {
+        if (report.isHackingAttempt) break;
         for (const pattern of THREAT_PATTERNS) {
             const match = dataToScan.match(pattern.regex);
             if (match) {
