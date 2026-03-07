@@ -24,7 +24,9 @@ export default function AdminUsersPage() {
     useEffect(() => {
         const loadData = async () => {
             await storageService.init();
-            const allFetchedUsers = await storageService.getUsers();
+            const { getUsersAction } = await import('@/app/actions/admin-actions');
+            const res = await getUsersAction();
+            const allFetchedUsers = res.data || [];
 
             // 1. Get Current User from Firebase Auth Source of Truth
             const unsubscribe = authService.onAuthStateChanged(async (firebaseUser) => {

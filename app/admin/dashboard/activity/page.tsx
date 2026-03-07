@@ -20,23 +20,15 @@ export default function AdminActivityPage() {
         try {
             await storageService.init();
 
-            // 1. Fetch Users (to see activeSessions)
-            const allUsers = await storageService.getUsers(true);
-            setUsers(allUsers);
+            const { getUsersAction, getActivityLogsAction } = await import('@/app/actions/admin-actions');
+            const [usersRes, logsRes] = await Promise.all([getUsersAction(), getActivityLogsAction()]);
 
-            // 2. Fetch recent activity logs (last 100)
-            const activityRef = collection(db, 'user_activity');
-            const q = query(activityRef, orderBy('timestamp', 'desc'), limit(100));
-            const snapshot = await getDocs(q);
+            setUsers(usersRes.data || []);
 
-            const fetchedLogs: ActivityLog[] = [];
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                fetchedLogs.push({
-                    ...data,
-                    timestamp: data.timestamp?.toDate() || new Date()
-                } as ActivityLog);
-            });
+            const fetchedLogs = (logsRes.data || []).map((log: any) => ({
+                ...log,
+                timestamp: new Date(log.timestamp)
+            }));
             setLogs(fetchedLogs);
         } catch (error) {
             console.error("Failed to load activity data:", error);

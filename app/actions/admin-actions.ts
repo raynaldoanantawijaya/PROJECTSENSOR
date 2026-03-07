@@ -106,3 +106,59 @@ export async function deleteAllSensorsAction(): Promise<{ success: boolean; erro
         return { success: false, error: error.message };
     }
 }
+
+export async function getUsersAction(): Promise<{ success: boolean; data?: User[]; error?: string }> {
+    const caller = await verifyAdminSession();
+    if (!caller) return { success: false, error: "Unauthorized" };
+
+    try {
+        const db = getAdminFirestore();
+        const snapshot = await db.collection("users").get();
+        const users: User[] = [];
+        snapshot.forEach(doc => {
+            users.push(doc.data() as User);
+        });
+        return { success: true, data: users };
+    } catch (e: any) {
+        return { success: false, error: e.message };
+    }
+}
+
+export async function getSensorsAction(): Promise<{ success: boolean; data?: Sensor[]; error?: string }> {
+    const caller = await verifyAdminSession();
+    if (!caller) return { success: false, error: "Unauthorized" };
+
+    try {
+        const db = getAdminFirestore();
+        const snapshot = await db.collection("sensors").get();
+        const sensors: Sensor[] = [];
+        snapshot.forEach(doc => {
+            sensors.push(doc.data() as Sensor);
+        });
+        return { success: true, data: sensors };
+    } catch (e: any) {
+        return { success: false, error: e.message };
+    }
+}
+
+export async function getActivityLogsAction(): Promise<{ success: boolean; data?: any[]; error?: string }> {
+    const caller = await verifyAdminSession();
+    if (!caller) return { success: false, error: "Unauthorized" };
+
+    try {
+        const db = getAdminFirestore();
+        const snapshot = await db.collection("user_activity").orderBy("timestamp", "desc").limit(500).get();
+        const logs: any[] = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            logs.push({
+                id: doc.id,
+                ...data,
+                timestamp: data.timestamp?.toDate?.()?.toISOString() || new Date().toISOString()
+            });
+        });
+        return { success: true, data: logs };
+    } catch (e: any) {
+        return { success: false, error: e.message };
+    }
+}

@@ -29,11 +29,13 @@ export default function AdminSensorsPage() {
     useEffect(() => {
         const init = async () => {
             await storageService.init();
-            const allSensors = await storageService.getSensors();
-            setSensors(allSensors);
+            const { getSensorsAction, getUsersAction } = await import('@/app/actions/admin-actions');
+            const [sensorsRes, usersRes] = await Promise.all([getSensorsAction(), getUsersAction()]);
+
+            setSensors(sensorsRes.data || []);
+            const users = usersRes.data || [];
 
             // Auth Check
-            const users = await storageService.getUsers();
             authService.onAuthStateChanged((firebaseUser) => {
                 const email = firebaseUser?.email;
                 if (email) {
