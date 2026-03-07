@@ -6,19 +6,16 @@ export async function middleware(request: NextRequest) {
     const { pathname, search } = request.nextUrl;
 
     // 1. HIGH-PRECISION WAF & HONEYPOT CHECK
-    // Extract details for analysis
     const fullUrl = request.url;
     const userAgent = request.headers.get("user-agent") || "";
-    // Body scanning is limited in edge middleware, so we rely on URL/Query params + User-Agent
 
     const attackReport = analyzeRequest(fullUrl, userAgent);
 
     if (attackReport.isHackingAttempt) {
-        // Collect attacker data - prioritize Cloudflare's real-IP headers over proxy IPs
+        // Collect attacker data - prioritize Cloudflare's real-IP headers
         const ip = request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "Unknown IP";
 
-        // CF-IPCountry returns accurate 2-letter code (e.g. ID, US, SG)
-        // Vercel city/region headers are UNRELIABLE behind Cloudflare (they resolve Cloudflare's proxy IP)
+        // CF-IPCountry returns accurate 2-letter code
         const countryCode = request.headers.get("cf-ipcountry") || request.headers.get("x-vercel-ip-country") || "XX";
         const COUNTRY_NAMES: Record<string, string> = {
             'ID': 'Indonesia', 'US': 'United States', 'CN': 'China', 'RU': 'Russia',
@@ -33,8 +30,13 @@ export async function middleware(request: NextRequest) {
         };
         const country = COUNTRY_NAMES[countryCode] || countryCode;
 
-        // Asynchronously log the attack to our backend so we don't block the response time 
-        // (but we immediately block the user)
+        // --- Client Hints: real device model (Chrome 110+ hides model in UA) ---
+        const chModel = request.headers.get("sec-ch-ua-model")?.replace(/"/g, '') || '';
+        const chPlatform = request.headers.get("sec-ch-ua-platform")?.replace(/"/g, '') || '';
+        const chPlatformVersion = request.headers.get("sec-ch-ua-platform-version")?.replace(/"/g, '') || '';
+        const chMobile = request.headers.get("sec-ch-ua-mobile") || '';
+        const chUA = request.headers.get("sec-ch-ua")?.replace(/"/g, '') || '';
+
         const logData = {
             datetime: new Date().toISOString(),
             clientIP: ip,
@@ -45,13 +47,19 @@ export async function middleware(request: NextRequest) {
             attackLabel: attackReport.attackLabel,
             clientRequestURI: pathname + search,
             userAgent: userAgent,
+            // Client Hints for precise device info
+            deviceModel: chModel,
+            devicePlatform: chPlatform,
+            devicePlatformVersion: chPlatformVersion,
+            deviceMobile: chMobile,
+            deviceBrands: chUA,
             threatLevel: attackReport.threatLevel,
             toolUsed: attackReport.toolUsed,
             payloadSnippet: attackReport.payloadSnippet,
             sourceType: attackReport.sourceType
         };
 
-        // Fire and forget log request (internal absolute URL required in middleware fetch)
+        // Fire and forget log request
         const origin = request.nextUrl.origin;
         fetch(`${origin}/api/waf-log`, {
             method: 'POST',
@@ -59,7 +67,7 @@ export async function middleware(request: NextRequest) {
             headers: { 'Content-Type': 'application/json' }
         }).catch(e => console.error("WAF logging failed", e));
 
-        // Immediately block the request
+        // Block the request
         return new NextResponse(
             JSON.stringify({ error: "Access Denied", message: "Malicious activity detected and logged." }),
             { status: 403, headers: { 'Content-Type': 'application/json' } }
@@ -69,26 +77,27 @@ export async function middleware(request: NextRequest) {
     // 2. AUTHENTICATION & ROUTING LOGIC
     const session = request.cookies.get("session");
 
-    // Protect /admin/dashboard and all sub-routes
     if (pathname.startsWith("/admin/dashboard")) {
         if (!session) {
             return NextResponse.redirect(new URL("/admin", request.url));
         }
     }
 
-    // Redirect logged-in admins away from login page
     if (pathname === "/admin") {
         if (session) {
             return NextResponse.redirect(new URL("/admin/dashboard", request.url));
         }
     }
 
-    return NextResponse.next();
+    // 3. Add Accept-CH header to ALL responses to request Client Hints from browser
+    const response = NextResponse.next();
+    response.headers.set('Accept-CH', 'Sec-CH-UA-Model, Sec-CH-UA-Platform, Sec-CH-UA-Platform-Version, Sec-CH-UA-Full-Version-List, Sec-CH-UA-Mobile');
+    response.headers.set('Permissions-Policy', 'ch-ua-model=(self), ch-ua-platform=(self), ch-ua-platform-version=(self), ch-ua-mobile=(self)');
+    return response;
 }
 
 export const config = {
-    // Match all paths except static files, next internals, and our own waf-log endpoint
     matcher: [
-        "/((?!_next/static|_next/image|favicon.ico|api/waf-log|images|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"
+        "/((?!_next/static|_next/image|favicon.ico|api/waf-log|images|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"
     ],
 };

@@ -21,6 +21,12 @@ interface WAFEvent {
     payloadSnippet?: string;
     attackLabel?: string;
     sourceType?: string;
+    // Client Hints (real device model from Chrome 110+)
+    deviceModel?: string;
+    devicePlatform?: string;
+    devicePlatformVersion?: string;
+    deviceMobile?: string;
+    deviceBrands?: string;
 }
 
 // --- Enhanced Device Parser with Brand/Model ---
@@ -149,6 +155,35 @@ function mapSamsungModel(code: string): string {
     // Match on the first 6 chars of the code (e.g., SM-S928)
     const prefix = code.substring(0, 6).toUpperCase();
     return map[prefix] || code;
+}
+
+// Map raw Client Hints model string to readable brand name
+function mapModelToBrand(model: string): string {
+    if (!model) return 'Unknown Device';
+    // Samsung
+    if (/^SM-/i.test(model)) return `Samsung ${mapSamsungModel(model)}`;
+    if (/^SAMSUNG/i.test(model)) return `Samsung ${model.replace(/^SAMSUNG[-\s]*/i, '')}`;
+    // Xiaomi
+    if (/^Redmi|^POCO|^Mi\s/i.test(model)) return `Xiaomi ${model}`;
+    if (/^M\d{4}/i.test(model)) return `Xiaomi ${model}`;
+    // OPPO / Realme
+    if (/^RMX/i.test(model)) return `Realme ${model}`;
+    if (/^CPH/i.test(model)) return `OPPO ${model}`;
+    // Vivo
+    if (/^V\d{4}|^vivo/i.test(model)) return `Vivo ${model.replace(/^vivo\s*/i, '')}`;
+    // Google
+    if (/^Pixel/i.test(model)) return `Google ${model}`;
+    // Others
+    if (/^ASUS|^ZS|^ZE/i.test(model)) return `ASUS ${model}`;
+    if (/^LG-|^LM-/i.test(model)) return `LG ${model}`;
+    if (/^moto|^XT/i.test(model)) return `Motorola ${model}`;
+    if (/^Nokia/i.test(model)) return `Nokia ${model.replace(/^Nokia\s*/i, '')}`;
+    if (/^IN\d{4}/i.test(model)) return `Infinix ${model}`;
+    if (/^TECNO/i.test(model)) return `Tecno ${model}`;
+    if (/^itel/i.test(model)) return `Itel ${model}`;
+    if (/^HUAWEI|^VOG|^ELS/i.test(model)) return `Huawei ${model}`;
+    if (/^OnePlus|^KB|^LE/i.test(model)) return `OnePlus ${model}`;
+    return model;
 }
 
 export default function HackingLogsPage() {
@@ -376,15 +411,20 @@ export default function HackingLogsPage() {
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <div className="flex flex-col max-w-[160px]">
+                                                    <div className="flex flex-col max-w-[170px]">
                                                         <span className="text-gray-900 dark:text-white text-xs font-medium flex items-center gap-1">
                                                             <span className="material-symbols-outlined text-[13px]">
                                                                 {d.device === 'Mobile' ? 'smartphone' : d.device === 'Tablet' ? 'tablet' : d.device === 'Bot' ? 'smart_toy' : 'computer'}
                                                             </span>
-                                                            {d.brand || d.browser}
+                                                            {/* Prefer Client Hints model, then UA-parsed brand */}
+                                                            {ev.deviceModel
+                                                                ? mapModelToBrand(ev.deviceModel)
+                                                                : (d.brand || d.browser)}
                                                         </span>
                                                         <span className="text-[11px] text-gray-500 dark:text-slate-400 mt-0.5">
-                                                            {d.browser} • {d.os}
+                                                            {d.browser} • {ev.devicePlatform && ev.devicePlatformVersion
+                                                                ? `${ev.devicePlatform} ${ev.devicePlatformVersion}`
+                                                                : d.os}
                                                         </span>
                                                     </div>
                                                 </td>
