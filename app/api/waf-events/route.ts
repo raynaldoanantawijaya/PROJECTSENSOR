@@ -4,7 +4,9 @@ import { getAdminFirestore } from '@/lib/firebase-admin';
 const CLOUDFLARE_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 const CLOUDFLARE_ZONE_ID = process.env.CLOUDFLARE_ZONE_ID;
 
-export const revalidate = 60; // Cache for 60 seconds to avoid hitting API limits
+// Force dynamic - never cache this endpoint
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET() {
     let cloudflareEvents: any[] = [];
@@ -44,7 +46,8 @@ export async function GET() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${CLOUDFLARE_API_TOKEN}`,
                 },
-                body: JSON.stringify({ query, variables: { zoneTag: CLOUDFLARE_ZONE_ID, limit: 100 } })
+                body: JSON.stringify({ query, variables: { zoneTag: CLOUDFLARE_ZONE_ID, limit: 100 } }),
+                cache: 'no-store'
             });
 
             const cfData = await cfRes.json();
@@ -63,12 +66,9 @@ export async function GET() {
     try {
         const db = getAdminFirestore();
 
-        // Get logs from the last 24 hours
-        const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
         const logsSnapshot = await db.collection('waf_logs')
-            .where('datetime', '>=', yesterday)
             .orderBy('datetime', 'desc')
-            .limit(100)
+            .limit(200)
             .get();
 
         logsSnapshot.forEach((doc: any) => {
@@ -76,7 +76,7 @@ export async function GET() {
             customEvents.push({
                 ...data,
                 id: doc.id,
-                isCustomWaf: true // Flag to identify high-precision logs
+                isCustomWaf: true
             });
         });
     } catch (e) {
@@ -88,6 +88,8 @@ export async function GET() {
         return new Date(b.datetime).getTime() - new Date(a.datetime).getTime();
     });
 
-    // Take top 150 most recent events overall
-    return NextResponse.json({ success: true, events: allEvents.slice(0, 150) });
+    return NextResponse.json(
+        { success: true, events: allEvents.slice(0, 200) },
+        { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' } }
+    );
 }
