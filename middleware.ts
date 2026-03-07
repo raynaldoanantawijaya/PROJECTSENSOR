@@ -16,9 +16,22 @@ export async function middleware(request: NextRequest) {
     if (attackReport.isHackingAttempt) {
         // Collect attacker data - prioritize Cloudflare's real-IP headers over proxy IPs
         const ip = request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "Unknown IP";
-        const country = request.headers.get("cf-ipcountry") || request.headers.get("x-vercel-ip-country") || "Unknown";
-        const city = request.headers.get("x-vercel-ip-city") || "";
-        const region = request.headers.get("x-vercel-ip-country-region") || "";
+
+        // CF-IPCountry returns accurate 2-letter code (e.g. ID, US, SG)
+        // Vercel city/region headers are UNRELIABLE behind Cloudflare (they resolve Cloudflare's proxy IP)
+        const countryCode = request.headers.get("cf-ipcountry") || request.headers.get("x-vercel-ip-country") || "XX";
+        const COUNTRY_NAMES: Record<string, string> = {
+            'ID': 'Indonesia', 'US': 'United States', 'CN': 'China', 'RU': 'Russia',
+            'SG': 'Singapore', 'IN': 'India', 'DE': 'Germany', 'NL': 'Netherlands',
+            'GB': 'United Kingdom', 'FR': 'France', 'JP': 'Japan', 'KR': 'South Korea',
+            'BR': 'Brazil', 'AU': 'Australia', 'CA': 'Canada', 'MY': 'Malaysia',
+            'TH': 'Thailand', 'VN': 'Vietnam', 'PH': 'Philippines', 'HK': 'Hong Kong',
+            'TW': 'Taiwan', 'UA': 'Ukraine', 'IR': 'Iran', 'PK': 'Pakistan',
+            'BD': 'Bangladesh', 'NG': 'Nigeria', 'TR': 'Turkey', 'IT': 'Italy',
+            'ES': 'Spain', 'PL': 'Poland', 'RO': 'Romania', 'XX': 'Unknown',
+            'T1': 'Tor Exit Node'
+        };
+        const country = COUNTRY_NAMES[countryCode] || countryCode;
 
         // Asynchronously log the attack to our backend so we don't block the response time 
         // (but we immediately block the user)
@@ -26,8 +39,6 @@ export async function middleware(request: NextRequest) {
             datetime: new Date().toISOString(),
             clientIP: ip,
             clientCountryName: country,
-            clientCity: city,
-            clientRegion: region,
             action: 'block',
             ruleId: 'CUSTOM_WAF',
             source: attackReport.attackType,
