@@ -51,7 +51,7 @@ function clearAttempts(ip: string) {
 // --------------------------------------------------------------------------------
 
 // Helper to verify session and role
-async function verifyAdminSession() {
+export async function verifyAdminSession() {
     const sessionCookie = (await cookies()).get("session")?.value;
     if (!sessionCookie) return null;
 
@@ -167,6 +167,10 @@ export async function deleteUserAction(targetUid: string): Promise<{ success: bo
             }
         }
 
+        // 4. Delete from Firestore Database explicitly
+        await db.collection("users").doc(targetUid).delete();
+
+        // 5. Delete from Firebase Auth
         await auth.deleteUser(targetUid);
         return { success: true };
     } catch (error: any) {
@@ -268,6 +272,18 @@ export async function loginAdminAction(idToken: string, turnstileToken: string):
 }
 
 export async function logoutAdminAction() {
+    try {
+        const sessionCookie = (await cookies()).get("session")?.value;
+        if (sessionCookie) {
+            const auth = getAdminAuth();
+            const decodedClaims = await auth.verifySessionCookie(sessionCookie);
+            // KILLS the session computationally at the Google Server level
+            await auth.revokeRefreshTokens(decodedClaims.uid);
+        }
+    } catch (e) {
+        console.warn("Session already invalid or expired during logout.");
+    }
+
     (await cookies()).delete("session");
     return { success: true };
 }

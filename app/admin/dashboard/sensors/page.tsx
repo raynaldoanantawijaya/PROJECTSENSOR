@@ -95,9 +95,18 @@ export default function AdminSensorsPage() {
             }
         }
 
-        await storageService.saveSensor(newSensor as Sensor);
-        const latestSensors = await storageService.getSensors();
-        setSensors(latestSensors);
+        try {
+            const { saveSensorAction } = await import('@/app/actions/admin-actions');
+            const res = await saveSensorAction(newSensor as Sensor);
+            if (!res.success) throw new Error(res.error);
+
+            const latestSensors = await storageService.getSensors(true); // Force refresh from DB is better, but getSensors uses client DB which might be blocked by read rules? Wait, the rules allow READ if auth != null. So getSensors is fine.
+            setSensors(latestSensors);
+        } catch (e: any) {
+            console.error(e);
+            alert("Failed to save sensor: " + e.message);
+            return;
+        }
 
         // Reset (keep type locked if subrole exists)
         const defaultType =
@@ -176,8 +185,17 @@ export default function AdminSensorsPage() {
         }
 
         if (confirm("Are you sure you want to delete this sensor?")) {
-            await storageService.deleteSensor(id);
-            setSensors(await storageService.getSensors());
+            try {
+                const { deleteSensorAction } = await import('@/app/actions/admin-actions');
+                const res = await deleteSensorAction(id);
+                if (!res.success) throw new Error(res.error);
+
+                setSensors(await storageService.getSensors(true));
+            } catch (e: any) {
+                console.error(e);
+                alert("Failed to delete sensor: " + e.message);
+                return;
+            }
             if (isEditing && newSensor.id === id) {
                 handleCancelEdit();
             }
@@ -214,14 +232,15 @@ export default function AdminSensorsPage() {
                                 onClick={async () => {
                                     if (confirm("DANGER: This will delete ALL sensors. Are you sure?")) {
                                         if (confirm("Really? This action cannot be undone.")) {
-                                            // @ts-ignore
-                                            if (storageService.deleteAllSensors) {
-                                                // @ts-ignore
-                                                await storageService.deleteAllSensors();
+                                            try {
+                                                const { deleteAllSensorsAction } = await import('@/app/actions/admin-actions');
+                                                const res = await deleteAllSensorsAction();
+                                                if (!res.success) throw new Error(res.error);
+
                                                 setSensors([]);
                                                 alert("All sensors deleted.");
-                                            } else {
-                                                alert("Feature not supported in this version.");
+                                            } catch (e: any) {
+                                                alert("Failed to delete sensors: " + e.message);
                                             }
                                         }
                                     }

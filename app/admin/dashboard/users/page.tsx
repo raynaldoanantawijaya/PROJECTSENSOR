@@ -185,11 +185,10 @@ export default function AdminUsersPage() {
                 const result = await deleteUserAction(targetUser.id);
 
                 if (!result.success) {
-                    console.error("Failed to delete from Auth:", result.error);
-                    alert("Warning: Could not delete user from Authentication provider. " + result.error);
+                    console.error("Failed to delete user:", result.error);
+                    alert("Warning: Could not delete user. " + result.error);
+                    return;
                 }
-
-                await storageService.deleteUser(targetUser.id);
 
                 // Refresh list
                 const freshUsers = await storageService.getUsers();
@@ -217,7 +216,9 @@ export default function AdminUsersPage() {
 
         try {
             const updatedUser = { ...targetUser, role: newRole as 'admin' | 'user' };
-            await storageService.saveUser(updatedUser);
+            const { saveUserAction } = await import('@/app/actions/admin-actions');
+            const res = await saveUserAction(updatedUser);
+            if (!res.success) throw new Error(res.error);
             // Optimistic update
             setUsers(prev => prev.map(u => u.id === targetUser.id ? updatedUser : u));
         } catch (e) {
@@ -235,7 +236,10 @@ export default function AdminUsersPage() {
                 ...targetUser,
                 subRole: newSubRole as any
             };
-            await storageService.saveUser(updatedUser);
+            const { saveUserAction } = await import('@/app/actions/admin-actions');
+            const res = await saveUserAction(updatedUser);
+            if (!res.success) throw new Error(res.error);
+
             setUsers(prev => prev.map(u => u.id === targetUser.id ? updatedUser : u));
         } catch (e) {
             console.error(e);
@@ -287,8 +291,15 @@ export default function AdminUsersPage() {
                 [key]: !targetUser.permissions[key]
             }
         };
-        await storageService.saveUser(updatedUser);
-        setUsers(users.map(u => u.id === targetUser.id ? updatedUser : u));
+        try {
+            const { saveUserAction } = await import('@/app/actions/admin-actions');
+            const res = await saveUserAction(updatedUser);
+            if (!res.success) throw new Error(res.error);
+            setUsers(users.map(u => u.id === targetUser.id ? updatedUser : u));
+        } catch (e: any) {
+            console.error(e);
+            alert("Failed to update permission: " + e.message);
+        }
     };
 
     return (
