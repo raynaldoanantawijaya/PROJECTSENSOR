@@ -2,7 +2,7 @@
 
 import { getAdminFirestore } from "@/lib/firebase-admin";
 import { User, Sensor } from "@/lib/storage";
-import { verifyAdminSession } from "./auth-actions"; // Need to export this from auth-actions
+import { verifyAdminSession, verifyStrictAdminSession } from "./auth-actions"; // Need to export this from auth-actions
 
 const COMMANDER_EMAIL = process.env.NEXT_PUBLIC_COMMANDER_EMAIL || "anantawijaya212@gmail.com";
 
@@ -12,7 +12,7 @@ const COMMANDER_EMAIL = process.env.NEXT_PUBLIC_COMMANDER_EMAIL || "anantawijaya
 // ============================================================================
 
 export async function saveUserAction(user: User): Promise<{ success: boolean; error?: string }> {
-    const caller = await verifyAdminSession();
+    const caller = await verifyStrictAdminSession();
     if (!caller) return { success: false, error: "Unauthorized" };
 
     const isCommander = caller.email?.toLowerCase() === COMMANDER_EMAIL.toLowerCase();
@@ -43,7 +43,7 @@ export async function saveUserAction(user: User): Promise<{ success: boolean; er
 }
 
 export async function saveSensorAction(sensor: Sensor): Promise<{ success: boolean; error?: string }> {
-    const caller = await verifyAdminSession();
+    const caller = await verifyStrictAdminSession();
     if (!caller) return { success: false, error: "Unauthorized" };
 
     const isCommander = caller.email?.toLowerCase() === COMMANDER_EMAIL.toLowerCase();
@@ -63,7 +63,7 @@ export async function saveSensorAction(sensor: Sensor): Promise<{ success: boole
 }
 
 export async function deleteSensorAction(sensorId: string): Promise<{ success: boolean; error?: string }> {
-    const caller = await verifyAdminSession();
+    const caller = await verifyStrictAdminSession();
     if (!caller) return { success: false, error: "Unauthorized" };
 
     const isCommander = caller.email?.toLowerCase() === COMMANDER_EMAIL.toLowerCase();
@@ -83,7 +83,7 @@ export async function deleteSensorAction(sensorId: string): Promise<{ success: b
 }
 
 export async function deleteAllSensorsAction(): Promise<{ success: boolean; error?: string }> {
-    const caller = await verifyAdminSession();
+    const caller = await verifyStrictAdminSession();
     if (!caller) return { success: false, error: "Unauthorized" };
 
     const isCommander = caller.email?.toLowerCase() === COMMANDER_EMAIL.toLowerCase();

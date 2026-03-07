@@ -28,19 +28,23 @@ export default function LoginPage() {
 
       // 1. Authenticate with Firebase Auth
       const cred = await authService.login(email, password);
+      const idToken = await cred.getIdToken();
 
-      // 2. Get Profile from Firestore
-      const appUser = await authService.getUserRole(email);
+      // 2. Get Profile securely from backend (Bypasses restricted client-side Firestore rules)
+      const { getUserProfileLoginAction } = await import('@/app/actions/auth-actions');
+      const profileRes = await getUserProfileLoginAction(idToken);
+
+      const appUser = profileRes.success ? profileRes.data : null;
 
       if (appUser) {
         // --- CLEAN UP STALE SESSION FROM THIS BROWSER FIRST ---
         // If this browser has an old sessionToken (from a crash/force-close),
         // remove it from Firestore so it doesn't count against the device limit.
         const existingToken = localStorage.getItem('sessionToken');
-        let activeSessions = appUser.activeSessions || [];
+        let activeSessions: string[] = appUser.activeSessions || [];
 
         if (existingToken && activeSessions.includes(existingToken)) {
-          activeSessions = activeSessions.filter(s => s !== existingToken);
+          activeSessions = activeSessions.filter((s: string) => s !== existingToken);
           localStorage.removeItem('sessionToken');
         }
 

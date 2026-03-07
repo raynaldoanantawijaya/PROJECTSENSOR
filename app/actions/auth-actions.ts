@@ -57,7 +57,51 @@ export async function verifyAdminSession() {
 
     try {
         const auth = getAdminAuth();
-        // Verify session cookie
+        // Verify session cookie LOCALLY without a forced network roundtrip (fast)
+        const decodedClaims = await auth.verifySessionCookie(sessionCookie, false);
+        const uid = decodedClaims.uid;
+
+        // Check Firestore Role
+        const db = getAdminFirestore();
+        const userDoc = await db.collection("users").doc(uid).get();
+        if (!userDoc.exists) return null;
+
+        return { uid, email: userDoc.data()?.email, role: userDoc.data()?.role, subRole: userDoc.data()?.subRole, canEdit: userDoc.data()?.permissions?.canEdit };
+    } catch (e) {
+        return null;
+    }
+}
+
+// --------------------------------------------------------------------------------
+// LOGIN HELPERS
+// --------------------------------------------------------------------------------
+export async function getUserProfileLoginAction(idToken: string): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+        const auth = getAdminAuth();
+        const decodedToken = await auth.verifyIdToken(idToken);
+        const uid = decodedToken.uid;
+
+        const db = getAdminFirestore();
+        const userDoc = await db.collection("users").doc(uid).get();
+
+        if (!userDoc.exists) {
+            return { success: false, error: "User profile not found in database." };
+        }
+
+        return { success: true, data: userDoc.data() };
+    } catch (e: any) {
+        return { success: false, error: e.message };
+    }
+}
+
+// Used for sensitive writes (Create/Delete/Edit) - performs forced network revocation check
+export async function verifyStrictAdminSession() {
+    const sessionCookie = (await cookies()).get("session")?.value;
+    if (!sessionCookie) return null;
+
+    try {
+        const auth = getAdminAuth();
+        // Verify session cookie WITH network check to ensure it wasn't recently revoked
         const decodedClaims = await auth.verifySessionCookie(sessionCookie, true);
         const uid = decodedClaims.uid;
 
