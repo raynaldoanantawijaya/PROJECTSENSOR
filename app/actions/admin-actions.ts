@@ -186,15 +186,6 @@ export async function clearLogsAction(): Promise<{ success: boolean; error?: str
 
         await bulkWriter.close();
 
-        // Log the clear action itself (ironic, but good for audit trailing the new state)
-        db.collection('user_activity').add({
-            userId: caller.uid,
-            username: caller.email,
-            action: 'CLEAR_LOGS',
-            details: 'Cleared all system activity logs',
-            timestamp: new Date()
-        });
-
         return { success: true };
     } catch (error: any) {
         console.error("clearLogsAction Error:", error);
