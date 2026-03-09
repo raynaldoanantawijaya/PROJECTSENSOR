@@ -84,11 +84,9 @@ export async function middleware(request: NextRequest) {
         }
     }
 
-    if (pathname === "/admin") {
-        if (session) {
-            return NextResponse.redirect(new URL("/admin/dashboard", request.url));
-        }
-    }
+    // Note: Removed auto-redirect from /admin → /admin/dashboard.
+    // The layout's verifyAdminSession() handles auth, and /admin page must be
+    // accessible to clear stale cookies via logoutAdminAction().
 
     // 3. Add Accept-CH header to ALL responses to request Client Hints from browser
     const response = NextResponse.next();

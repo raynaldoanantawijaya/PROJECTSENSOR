@@ -3,7 +3,17 @@
 import React, { useEffect, useState } from 'react';
 import { User } from '@/lib/storage';
 import DashboardLoadingSpinner from '@/components/DashboardLoadingSpinner';
-import { ActivityLog } from '@/lib/activity-logger';
+
+// Local type to avoid importing from activity-logger.ts (which triggers Firebase client init)
+interface ActivityLog {
+    userId: string;
+    userEmail: string;
+    action: string;
+    details: string;
+    deviceInfo: string;
+    isSuspicious: boolean;
+    timestamp: any;
+}
 
 export default function AdminActivityPage() {
     const [users, setUsers] = useState<User[]>([]);
