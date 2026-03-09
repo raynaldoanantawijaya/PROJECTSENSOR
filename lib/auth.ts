@@ -6,7 +6,7 @@ import {
     onAuthStateChanged,
     User as FirebaseUser
 } from "firebase/auth";
-import { storageService, User as AppUser } from "./storage";
+import { User as AppUser } from "./storage";
 
 export const authService = {
     // Login with Email & Password
@@ -51,9 +51,10 @@ export const authService = {
         }
     },
 
-    // Get current user role from Firestore based on Auth Email
+    // Get current user role from backend API
     getUserRole: async (email: string): Promise<AppUser | undefined> => {
-        const users = await storageService.getUsers();
+        const { fetchDashboardData } = await import('@/lib/dashboard-data');
+        const { users } = await fetchDashboardData('users');
         return users.find(u => u.email.toLowerCase() === email.toLowerCase());
     },
 

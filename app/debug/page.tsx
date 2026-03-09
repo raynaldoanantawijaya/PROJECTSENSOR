@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { storageService } from '@/lib/storage';
 
 export default function DebugPage() {
     const [sensors, setSensors] = useState<any[]>([]);
@@ -10,9 +9,9 @@ export default function DebugPage() {
 
     useEffect(() => {
         const load = async () => {
-            storageService.init();
-            const data = await storageService.getSensors();
-            setSensors(data);
+            const { fetchDashboardData } = await import('@/lib/dashboard-data');
+            const { sensors } = await fetchDashboardData('sensors');
+            setSensors(sensors);
         };
         load();
     }, []);
