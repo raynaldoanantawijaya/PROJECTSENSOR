@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { User } from '@/lib/storage';
+import DashboardLoadingSpinner from '@/components/DashboardLoadingSpinner';
 import { db } from '@/lib/firebase';
 import { collection, query, orderBy, limit, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { ActivityLog } from '@/lib/activity-logger';
@@ -78,11 +79,7 @@ export default function AdminActivityPage() {
     };
 
     if (isLoading) {
-        return (
-            <div className="flex-1 flex items-center justify-center min-h-[50vh]">
-                <div className="size-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-            </div>
-        );
+        return <DashboardLoadingSpinner message="Memuat aktivitas user..." />;
     }
 
     return (

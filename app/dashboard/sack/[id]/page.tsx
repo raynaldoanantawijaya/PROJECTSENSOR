@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, use, useMemo, useRef } from "react";
 import { Sensor } from '@/lib/storage';
 import { useSackSensorData, writeSackCalibration } from "@/lib/useSackSensorData";
+import DashboardLoadingSpinner from "@/components/DashboardLoadingSpinner";
 
 export default function SackSensorDetail({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
@@ -43,7 +44,7 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
 
             // Log the edit activity
             import('@/lib/activity-logger').then(({ logUserActivity }) => {
-                logUserActivity('EDIT_CONFIG', `Diubah ${key} menjadi ${val} pada sensor ${sensor.name}`);
+                logUserActivity('EDIT_CONFIG', `Diubah ${key} menjadi ${val} pada sensor ${sensor.name} `);
             }).catch(e => console.error("Logger error:", e));
 
             setSensor(updatedSensor);
@@ -128,9 +129,9 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
 
     const generatePath = (points: { x: number, y: number }[], close: boolean = false) => {
         if (points.length === 0) return "";
-        let d = `M ${points[0].x} ${points[0].y}`;
+        let d = `M ${points[0].x} ${points[0].y} `;
         for (let i = 1; i < points.length; i++) {
-            d += ` L ${points[i].x} ${points[i].y}`;
+            d += ` L ${points[i].x} ${points[i].y} `;
         }
         if (close) return `${d} L 100 100 L 0 100 Z`;
         return d;
@@ -149,7 +150,7 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
     const pathD = generatePath(chartPoints);
     const areaD = generatePath(chartPoints, true);
 
-    if (!sensor) return <div className="p-10 text-white text-center">Loading...</div>;
+    if (!sensor) return <DashboardLoadingSpinner message="Memuat detail sensor..." />;
 
     return (
         <div className="flex flex-col p-6 md:p-10 gap-6 max-w-[1280px] mx-auto w-full">
@@ -193,13 +194,13 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
                             {/* Ruler Ticks */}
                             <div className="absolute bottom-0 w-full h-full flex justify-between px-4 pb-2 items-end">
                                 {[...Array(21)].map((_, i) => (
-                                    <div key={i} className={`w-px bg-[#334155] ${i % 5 === 0 ? 'h-3 md:h-4' : 'h-1 md:h-2'}`}></div>
+                                    <div key={i} className={`w - px bg - [#334155] ${i % 5 === 0 ? 'h-3 md:h-4' : 'h-1 md:h-2'} `}></div>
                                 ))}
                             </div>
 
                             {/* Dynamic Needle/Arrow */}
                             <div className="absolute top-0 h-full w-1 transition-all duration-500 ease-out z-10"
-                                style={{ left: `${Math.min(100, Math.max(0, lebarVal))}%` }}>
+                                style={{ left: `${Math.min(100, Math.max(0, lebarVal))}% ` }}>
                                 <div className="absolute -top-1 -left-3 bg-white text-slate-900 text-xs font-bold px-1.5 py-0.5 rounded shadow-lg">
                                     {lebarVal}
                                 </div>
@@ -333,8 +334,8 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
                             <span className="material-symbols-outlined text-[#92a4c9] text-[20px]">settings</span>
                             Setting Sensor
                         </h3>
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${isConnected ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
-                            <span className={`size-1.5 rounded-full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></span>
+                        <span className={`inline - flex items - center gap - 1.5 px - 2.5 py - 1 rounded - full text - xs font - bold uppercase tracking - wider ${isConnected ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'} `}>
+                            <span className={`size - 1.5 rounded - full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'} `}></span>
                             {isConnected ? "Online" : "Offline"}
                         </span>
                     </div>
@@ -345,18 +346,18 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
                             <div className="flex gap-4">
                                 {/* LED Sensor A */}
                                 <div className="flex-1 flex items-center gap-3 bg-[#111722] border border-[#232f48] rounded-lg px-4 py-3">
-                                    <div className={`size-5 rounded-full shadow-lg transition-all duration-500 ${ir1 ? 'bg-green-500 shadow-green-500/50 animate-pulse' : 'bg-gray-600 shadow-none'}`}></div>
+                                    <div className={`size - 5 rounded - full shadow - lg transition - all duration - 500 ${ir1 ? 'bg-green-500 shadow-green-500/50 animate-pulse' : 'bg-gray-600 shadow-none'} `}></div>
                                     <div className="flex flex-col">
                                         <span className="text-white text-sm font-medium">Sensor A (IR1)</span>
-                                        <span className={`text-[10px] font-semibold uppercase tracking-wider ${ir1 ? 'text-green-400' : 'text-gray-500'}`}>{ir1 ? 'Detected' : 'Clear'}</span>
+                                        <span className={`text - [10px] font - semibold uppercase tracking - wider ${ir1 ? 'text-green-400' : 'text-gray-500'} `}>{ir1 ? 'Detected' : 'Clear'}</span>
                                     </div>
                                 </div>
                                 {/* LED Sensor B */}
                                 <div className="flex-1 flex items-center gap-3 bg-[#111722] border border-[#232f48] rounded-lg px-4 py-3">
-                                    <div className={`size-5 rounded-full shadow-lg transition-all duration-500 ${ir2 ? 'bg-green-500 shadow-green-500/50 animate-pulse' : 'bg-gray-600 shadow-none'}`}></div>
+                                    <div className={`size - 5 rounded - full shadow - lg transition - all duration - 500 ${ir2 ? 'bg-green-500 shadow-green-500/50 animate-pulse' : 'bg-gray-600 shadow-none'} `}></div>
                                     <div className="flex flex-col">
                                         <span className="text-white text-sm font-medium">Sensor B (IR2)</span>
-                                        <span className={`text-[10px] font-semibold uppercase tracking-wider ${ir2 ? 'text-green-400' : 'text-gray-500'}`}>{ir2 ? 'Detected' : 'Clear'}</span>
+                                        <span className={`text - [10px] font - semibold uppercase tracking - wider ${ir2 ? 'text-green-400' : 'text-gray-500'} `}>{ir2 ? 'Detected' : 'Clear'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -366,7 +367,7 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
                         <div>
                             <span className="text-[#92a4c9] text-xs font-semibold uppercase tracking-wider mb-3 block">Hasil Kalibrasi</span>
                             <div className="bg-[#111722] border border-[#232f48] rounded-lg p-5 flex flex-col items-center justify-center gap-2">
-                                <span className={`text-5xl font-bold tracking-tight text-white`}>{parseFloat(offsetVal.toFixed(5))}</span>
+                                <span className={`text - 5xl font - bold tracking - tight text - white`}>{parseFloat(offsetVal.toFixed(5))}</span>
                                 <span className="text-[#92a4c9] text-sm font-medium">cm</span>
                             </div>
                         </div>
@@ -387,7 +388,7 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
                         <div className="bg-[#111722] border border-[#232f48] rounded-lg px-3 py-1.5 flex flex-col items-end md:items-start min-w-[80px]">
                             <span className="text-[9px] text-[#92a4c9] font-medium uppercase tracking-wider">{hoverData ? "Recorded" : "Live"}</span>
                             <div className="flex items-baseline gap-1">
-                                <span className={`text-lg md:text-xl font-bold ${hoverData ? 'text-blue-400' : 'text-white'}`}>
+                                <span className={`text - lg md: text - xl font - bold ${hoverData ? 'text-blue-400' : 'text-white'} `}>
                                     {hoverData ? Math.round(hoverData.val) : lebarVal}
                                 </span>
                                 <span className="text-[10px] text-[#92a4c9] font-medium">cm</span>
@@ -401,7 +402,7 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
                             <button
                                 key={filter}
                                 onClick={() => setActiveFilter(filter)}
-                                className={`px-2 py-1 md:px-3 text-[10px] md:text-xs font-medium transition-all rounded whitespace-nowrap ${activeFilter === filter ? 'bg-primary text-white shadow-sm' : 'text-[#92a4c9] hover:text-white'}`}
+                                className={`px - 2 py - 1 md: px - 3 text - [10px] md: text - xs font - medium transition - all rounded whitespace - nowrap ${activeFilter === filter ? 'bg-primary text-white shadow-sm' : 'text-[#92a4c9] hover:text-white'} `}
                             >
                                 {filter}
                             </button>
@@ -439,9 +440,9 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
                         {/* Interactive Logic */}
                         {hoverData ? (
                             <>
-                                <div className="absolute top-0 bottom-0 w-px bg-white/20 border-l border-dashed border-white/40 pointer-events-none" style={{ left: `${hoverData.x}%` }} />
+                                <div className="absolute top-0 bottom-0 w-px bg-white/20 border-l border-dashed border-white/40 pointer-events-none" style={{ left: `${hoverData.x}% ` }} />
                                 <div className="absolute size-3 bg-white border-2 border-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)] transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20"
-                                    style={{ left: `${hoverData.x}%`, top: `${hoverData.y}%` }}>
+                                    style={{ left: `${hoverData.x}% `, top: `${hoverData.y}% ` }}>
                                 </div>
                             </>
                         ) : null}

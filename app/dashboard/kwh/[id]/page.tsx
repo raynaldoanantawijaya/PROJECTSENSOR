@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, use, useMemo } from "react";
 import { Sensor } from '@/lib/storage';
 import { useSmartSensorData } from "@/lib/smart-sensor";
+import DashboardLoadingSpinner from "@/components/DashboardLoadingSpinner";
 
 interface KwhData {
     name: string;
@@ -122,7 +123,7 @@ export default function KwhSensorDetail({ params }: { params: Promise<{ id: stri
     const pathD = generatePath(chartPoints);
     const areaD = generatePath(chartPoints, true);
 
-    if (!data || !sensor) return <div className="p-10 text-white text-center">Loading...</div>;
+    if (!data || !sensor) return <DashboardLoadingSpinner message="Memuat detail sensor..." />;
 
     return (
         <div className="flex flex-col p-6 md:p-10 gap-6 max-w-[1280px] mx-auto w-full">

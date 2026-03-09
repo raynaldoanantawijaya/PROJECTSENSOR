@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import DashboardLoadingSpinner from '@/components/DashboardLoadingSpinner';
 
 export default function AdminDashboardPage() {
     const [userCount, setUserCount] = useState(0);
     const [activeSensorCount, setActiveSensorCount] = useState(0);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const initData = async () => {
@@ -20,9 +22,12 @@ export default function AdminDashboardPage() {
             const sensors = sensorsRes.data || [];
             const activeCount = sensors.filter((s: any) => s.status === 'active').length;
             setActiveSensorCount(activeCount);
+            setIsLoading(false);
         };
         initData();
     }, []);
+
+    if (isLoading) return <DashboardLoadingSpinner message="Memuat data admin..." />;
 
     return (
         <>

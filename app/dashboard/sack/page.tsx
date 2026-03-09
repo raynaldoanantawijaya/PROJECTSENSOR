@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Sensor } from "@/lib/storage";
 import { useSackSensorData } from "@/lib/useSackSensorData";
+import DashboardLoadingSpinner from "@/components/DashboardLoadingSpinner";
 
 // Variant styles based on status/index
 const VARIANTS = {
@@ -122,13 +123,14 @@ const SackSensorCard = ({ sensor, index, isVisible }: { sensor: Sensor; index: n
 export default function SackSensorPage() {
     const [sensors, setSensors] = useState<Sensor[]>([]);
     const [isVisible, setIsVisible] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const load = async () => {
             const { fetchDashboardData } = await import('@/lib/dashboard-data');
             const { sensors: allSensors } = await fetchDashboardData('sensors');
-            // Filter only sack sensors
             setSensors(allSensors.filter(s => s.type === 'sack'));
+            setIsLoading(false);
         };
         load();
 
@@ -136,6 +138,8 @@ export default function SackSensorPage() {
         document.addEventListener("visibilitychange", handleVis);
         return () => document.removeEventListener("visibilitychange", handleVis);
     }, []);
+
+    if (isLoading) return <DashboardLoadingSpinner message="Memuat sensor lebar..." />;
 
     return (
         <div className="max-w-[1400px]">

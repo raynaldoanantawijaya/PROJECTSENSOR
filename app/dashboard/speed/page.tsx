@@ -4,6 +4,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Sensor } from "@/lib/storage";
+import DashboardLoadingSpinner from "@/components/DashboardLoadingSpinner";
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getDatabase, ref, onValue, off } from "firebase/database";
 
@@ -132,6 +133,7 @@ const SpeedSensorCard = ({ sensor, isVisible }: { sensor: Sensor; isVisible: boo
 export default function SpeedSensorPage() {
     const [sensors, setSensors] = useState<Sensor[]>([]);
     const [isVisible, setIsVisible] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         // Load Sensors
@@ -139,17 +141,19 @@ export default function SpeedSensorPage() {
             const { fetchDashboardData } = await import('@/lib/dashboard-data');
             const { sensors: allSensors } = await fetchDashboardData('sensors');
             setSensors(allSensors.filter(s => s.type === 'speed'));
+            setIsLoading(false);
         };
         load();
 
         // Handle Page Visibility to save bandwidth
         const handleVisibilityChange = () => {
             setIsVisible(document.visibilityState === 'visible');
-            // console.log("Visibility Changed:", document.visibilityState);
         };
         document.addEventListener("visibilitychange", handleVisibilityChange);
         return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
     }, []);
+
+    if (isLoading) return <DashboardLoadingSpinner message="Memuat sensor kecepatan..." />;
 
     return (
         <div className="max-w-[1400px]">

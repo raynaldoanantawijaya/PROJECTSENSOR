@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Sensor } from "@/lib/storage";
 import { useSmartSensorData } from "@/lib/smart-sensor";
+import DashboardLoadingSpinner from "@/components/DashboardLoadingSpinner";
 
 const VARIANTS = {
     active: {
@@ -151,12 +152,14 @@ const KwhSensorCard = ({ sensor, index, isVisible }: { sensor: Sensor; index: nu
 export default function KwhSensorPage() {
     const [sensors, setSensors] = useState<Sensor[]>([]);
     const [isVisible, setIsVisible] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const load = async () => {
             const { fetchDashboardData } = await import('@/lib/dashboard-data');
             const { sensors: allSensors } = await fetchDashboardData('sensors');
             setSensors(allSensors.filter(s => s.type === 'kwh'));
+            setIsLoading(false);
         };
         load();
 
@@ -164,6 +167,8 @@ export default function KwhSensorPage() {
         document.addEventListener("visibilitychange", handleVis);
         return () => document.removeEventListener("visibilitychange", handleVis);
     }, []);
+
+    if (isLoading) return <DashboardLoadingSpinner message="Memuat sensor KWH..." />;
 
     return (
         <div className="max-w-[1400px]">

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, use, useMemo } from "react";
 import { Sensor } from '@/lib/storage';
 import { useSmartSensorData } from "@/lib/smart-sensor";
+import DashboardLoadingSpinner from "@/components/DashboardLoadingSpinner";
 
 interface SpeedData {
     name: string;
@@ -154,7 +155,7 @@ export default function SpeedSensorDetail({ params }: { params: Promise<{ id: st
         setHoverData({ x: point.x, y: point.y, val: exactValue });
     };
 
-    if (!data || !sensor) return <div className="p-10 text-white text-center">Loading...</div>;
+    if (!data || !sensor) return <DashboardLoadingSpinner message="Memuat detail sensor..." />;
 
     const pathD = generatePath(chartPoints);
     const areaD = generatePath(chartPoints, true);

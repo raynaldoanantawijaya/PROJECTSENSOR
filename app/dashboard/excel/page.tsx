@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Sensor, User } from "@/lib/storage";
+import DashboardLoadingSpinner from "@/components/DashboardLoadingSpinner";
 
 const slugify = (text: string) => text.toLowerCase().replace(/\s+/g, '-');
 
 export default function ExcelPreviewPage() {
     const [sensors, setSensors] = useState<Sensor[]>([]);
     const [user, setUser] = useState<User | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     // CONFIG DIRECT DOWNLOAD (XLSX) - Default Fallback REMOVED
     // const SPREADSHEET_ID = "1ijV_1Bd3DIQbYt0Vzhuj4YBwEkVIuaygMHwA2jECHMs";
@@ -31,7 +33,7 @@ export default function ExcelPreviewPage() {
                 }
             }
         };
-        init();
+        init().finally(() => setIsLoading(false));
     }, []);
 
     const getSensorsByType = (type: Sensor['type']) => {
@@ -88,6 +90,8 @@ export default function ExcelPreviewPage() {
     const speedSensors = getSensorsByType('speed');
     const sackSensors = getSensorsByType('sack');
     const kwhSensors = getSensorsByType('kwh');
+
+    if (isLoading) return <DashboardLoadingSpinner message="Memuat data spreadsheet..." />;
 
     return (
         <div className="max-w-7xl mx-auto space-y-8">
