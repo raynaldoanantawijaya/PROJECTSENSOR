@@ -3,8 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import { User } from '@/lib/storage';
 import DashboardLoadingSpinner from '@/components/DashboardLoadingSpinner';
-import { db } from '@/lib/firebase';
-import { collection, query, orderBy, limit, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { ActivityLog } from '@/lib/activity-logger';
 
 export default function AdminActivityPage() {
