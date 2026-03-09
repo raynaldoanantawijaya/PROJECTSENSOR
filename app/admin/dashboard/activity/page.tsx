@@ -204,8 +204,8 @@ export default function AdminActivityPage() {
                                             <p className="text-[#92a4c9] text-xs">{log.timestamp instanceof Date ? log.timestamp.toLocaleTimeString('id-ID', { hour12: false }) : '-'}</p>
                                         </td>
                                         <td className="p-4 align-top">
-                                            <p className="text-white text-sm font-medium">{log.userEmail.split('@')[0]}</p>
-                                            <p className="text-[#92a4c9] text-[10px]">{log.userEmail}</p>
+                                            <p className="text-white text-sm font-medium">{(log.userEmail || 'Unknown').split('@')[0]}</p>
+                                            <p className="text-[#92a4c9] text-[10px]">{log.userEmail || '-'}</p>
                                         </td>
                                         <td className="p-4 align-top">
                                             <div className="flex items-center gap-2 mb-1">
