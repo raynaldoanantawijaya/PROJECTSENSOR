@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Sensor } from "@/lib/storage";
 import { useSmartSensorData } from "@/lib/smart-sensor";
 import DashboardLoadingSpinner from "@/components/DashboardLoadingSpinner";
+import { useRouter } from "next/navigation";
 
 const VARIANTS = {
     active: {
@@ -150,12 +151,26 @@ const KwhSensorCard = ({ sensor, index, isVisible }: { sensor: Sensor; index: nu
 };
 
 export default function KwhSensorPage() {
+    const router = useRouter();
     const [sensors, setSensors] = useState<Sensor[]>([]);
     const [isVisible, setIsVisible] = useState(true);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const load = async () => {
+            // Permission check
+            const storedUser = localStorage.getItem('currentUser');
+            if (storedUser) {
+                try {
+                    const u = JSON.parse(storedUser);
+                    if (u.permissions && !u.permissions.viewKwh) {
+                        alert('Anda tidak memiliki izin untuk mengakses sensor KWH.');
+                        router.replace('/dashboard');
+                        return;
+                    }
+                } catch (e) { /* ignore parse error */ }
+            }
+
             const { fetchDashboardData } = await import('@/lib/dashboard-data');
             const { sensors: allSensors } = await fetchDashboardData('sensors');
             setSensors(allSensors.filter(s => s.type === 'kwh'));

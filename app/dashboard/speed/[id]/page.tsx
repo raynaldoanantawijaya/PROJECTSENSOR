@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, use, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Sensor } from '@/lib/storage';
 import { useSmartSensorData } from "@/lib/smart-sensor";
 import DashboardLoadingSpinner from "@/components/DashboardLoadingSpinner";
@@ -16,6 +17,7 @@ interface SpeedData {
 
 export default function SpeedSensorDetail({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
+    const router = useRouter();
     const [sensor, setSensor] = useState<Sensor | null>(null);
     const [speed, setSpeed] = useState(0);
     const [unit, setUnit] = useState('M/min');
@@ -39,6 +41,18 @@ export default function SpeedSensorDetail({ params }: { params: Promise<{ id: st
 
     // 1. Fetch Sensor Metadata (Instant from cache)
     useEffect(() => {
+        // Permission check
+        const storedUser = localStorage.getItem('currentUser');
+        if (storedUser) {
+            try {
+                const u = JSON.parse(storedUser);
+                if (u.permissions && !u.permissions.viewSpeed) {
+                    router.replace('/dashboard');
+                    return;
+                }
+            } catch (e) { /* ignore */ }
+        }
+
         const fetchSensor = async () => {
             const { fetchDashboardData } = await import('@/lib/dashboard-data');
             const { sensors } = await fetchDashboardData('sensors');

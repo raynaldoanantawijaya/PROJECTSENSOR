@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, use, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Sensor } from '@/lib/storage';
 import { useSmartSensorData } from "@/lib/smart-sensor";
 import DashboardLoadingSpinner from "@/components/DashboardLoadingSpinner";
@@ -17,6 +18,7 @@ interface KwhData {
 
 export default function KwhSensorDetail({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
+    const router = useRouter();
     const [sensor, setSensor] = useState<Sensor | null>(null);
     const [isVisible, setIsVisible] = useState(true);
 
@@ -39,6 +41,18 @@ export default function KwhSensorDetail({ params }: { params: Promise<{ id: stri
 
     // 1. Fetch Sensor Metadata
     useEffect(() => {
+        // Permission check
+        const storedUser = localStorage.getItem('currentUser');
+        if (storedUser) {
+            try {
+                const u = JSON.parse(storedUser);
+                if (u.permissions && !u.permissions.viewKwh) {
+                    router.replace('/dashboard');
+                    return;
+                }
+            } catch (e) { /* ignore */ }
+        }
+
         const fetchSensor = async () => {
             // Instant cache read
             const { fetchDashboardData } = await import('@/lib/dashboard-data');

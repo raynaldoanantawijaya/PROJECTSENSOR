@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Sensor } from "@/lib/storage";
 import { useSackSensorData } from "@/lib/useSackSensorData";
 import DashboardLoadingSpinner from "@/components/DashboardLoadingSpinner";
+import { useRouter } from "next/navigation";
 
 // Variant styles based on status/index
 const VARIANTS = {
@@ -121,12 +122,26 @@ const SackSensorCard = ({ sensor, index, isVisible }: { sensor: Sensor; index: n
 };
 
 export default function SackSensorPage() {
+    const router = useRouter();
     const [sensors, setSensors] = useState<Sensor[]>([]);
     const [isVisible, setIsVisible] = useState(true);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const load = async () => {
+            // Permission check
+            const storedUser = localStorage.getItem('currentUser');
+            if (storedUser) {
+                try {
+                    const u = JSON.parse(storedUser);
+                    if (u.permissions && !u.permissions.viewSack) {
+                        alert('Anda tidak memiliki izin untuk mengakses sensor lebar.');
+                        router.replace('/dashboard');
+                        return;
+                    }
+                } catch (e) { /* ignore parse error */ }
+            }
+
             const { fetchDashboardData } = await import('@/lib/dashboard-data');
             const { sensors: allSensors } = await fetchDashboardData('sensors');
             setSensors(allSensors.filter(s => s.type === 'sack'));

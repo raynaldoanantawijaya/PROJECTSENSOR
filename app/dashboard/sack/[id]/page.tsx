@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useState, use, useMemo, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Sensor } from '@/lib/storage';
 import { useSackSensorData, writeSackCalibration } from "@/lib/useSackSensorData";
 import DashboardLoadingSpinner from "@/components/DashboardLoadingSpinner";
 
 export default function SackSensorDetail({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
+    const router = useRouter();
     const [sensor, setSensor] = useState<Sensor | null>(null);
     const [lebarVal, setLebarVal] = useState(0);  // Hasil pengukuran
     const [offsetVal, setOffsetVal] = useState(0); // Hasil kalibrasi
@@ -78,6 +80,18 @@ export default function SackSensorDetail({ params }: { params: Promise<{ id: str
 
     // 1. Fetch sensor data from backend API
     useEffect(() => {
+        // Permission check
+        const storedUser = localStorage.getItem('currentUser');
+        if (storedUser) {
+            try {
+                const u = JSON.parse(storedUser);
+                if (u.permissions && !u.permissions.viewSack) {
+                    router.replace('/dashboard');
+                    return;
+                }
+            } catch (e) { /* ignore */ }
+        }
+
         const load = async () => {
             const { fetchDashboardData } = await import('@/lib/dashboard-data');
             const { sensors } = await fetchDashboardData('sensors');

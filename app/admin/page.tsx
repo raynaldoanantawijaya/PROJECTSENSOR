@@ -15,6 +15,10 @@ export default function AdminLoginPage() {
     const [error, setError] = useState('');
 
     useEffect(() => {
+        // Clear any stale admin session cookie to prevent bypass
+        import('@/app/actions/auth-actions').then(({ logoutAdminAction }) => {
+            logoutAdminAction().catch(() => { });
+        });
         authService.logout();
     }, []);
 

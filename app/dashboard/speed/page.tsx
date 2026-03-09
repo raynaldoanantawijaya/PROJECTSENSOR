@@ -7,6 +7,7 @@ import { Sensor } from "@/lib/storage";
 import DashboardLoadingSpinner from "@/components/DashboardLoadingSpinner";
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getDatabase, ref, onValue, off } from "firebase/database";
+import { useRouter } from "next/navigation";
 
 import { useSmartSensorData } from "@/lib/smart-sensor";
 
@@ -131,13 +132,26 @@ const SpeedSensorCard = ({ sensor, isVisible }: { sensor: Sensor; isVisible: boo
 };
 
 export default function SpeedSensorPage() {
+    const router = useRouter();
     const [sensors, setSensors] = useState<Sensor[]>([]);
     const [isVisible, setIsVisible] = useState(true);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        // Load Sensors
         const load = async () => {
+            // Permission check
+            const storedUser = localStorage.getItem('currentUser');
+            if (storedUser) {
+                try {
+                    const u = JSON.parse(storedUser);
+                    if (u.permissions && !u.permissions.viewSpeed) {
+                        alert('Anda tidak memiliki izin untuk mengakses sensor kecepatan.');
+                        router.replace('/dashboard');
+                        return;
+                    }
+                } catch (e) { /* ignore parse error */ }
+            }
+
             const { fetchDashboardData } = await import('@/lib/dashboard-data');
             const { sensors: allSensors } = await fetchDashboardData('sensors');
             setSensors(allSensors.filter(s => s.type === 'speed'));
