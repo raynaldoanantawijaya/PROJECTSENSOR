@@ -69,8 +69,6 @@ export default function AdminUsersPage() {
         loadData();
     }, []);
 
-    if (isLoading) return <DashboardLoadingSpinner message="Memuat data user..." />;
-
     // Derived state for Commander Access
     // We check BOTH the full user object AND the raw email state to be absolutely sure
     const isCommanderLoggedIn =
@@ -311,6 +309,8 @@ export default function AdminUsersPage() {
             alert("Failed to update permission: " + e.message);
         }
     };
+
+    if (isLoading) return <DashboardLoadingSpinner message="Memuat data user..." />;
 
     return (
         <>

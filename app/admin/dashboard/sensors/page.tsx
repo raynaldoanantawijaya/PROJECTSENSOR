@@ -60,8 +60,6 @@ export default function AdminSensorsPage() {
         init();
     }, []);
 
-    if (isLoading) return <DashboardLoadingSpinner message="Memuat data sensor..." />;
-
     // Derived State
     const isCommander = currentUser?.email.toLowerCase() === COMMANDER_EMAIL.toLowerCase();
     const userSubRole = currentUser?.subRole;
@@ -222,6 +220,8 @@ export default function AdminSensorsPage() {
             setNewSensor(prev => ({ ...prev, type: fixedType }));
         }
     }, [userSubRole, isEditing]);
+
+    if (isLoading) return <DashboardLoadingSpinner message="Memuat data sensor..." />;
 
     return (
         <>
