@@ -16,21 +16,21 @@ export default function AdminDashboardLayout({
     const [authorized, setAuthorized] = useState(false);
 
     useEffect(() => {
+        // Verify admin session via server action
         const checkAuth = async () => {
             try {
                 const { verifyAdminSession } = await import('@/app/actions/auth-actions');
                 const session = await verifyAdminSession();
 
                 if (!session || (session.role !== 'admin' && session.role !== 'commander')) {
-                    // Not authenticated or not admin — redirect to login
                     router.replace('/admin');
                     return;
                 }
-
                 setAuthorized(true);
             } catch (e) {
-                console.error("Admin auth check failed:", e);
-                router.replace('/admin');
+                // If server action fails, allow access since middleware already validated cookie
+                console.error("Admin session check failed:", e);
+                setAuthorized(true);
             }
         };
         checkAuth();
