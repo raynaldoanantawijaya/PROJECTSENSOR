@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { storageService, User } from '@/lib/storage';
+import { User } from '@/lib/storage';
 import { db } from '@/lib/firebase';
-import { collection, query, orderBy, limit, getDocs, deleteDoc, doc, writeBatch } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { ActivityLog } from '@/lib/activity-logger';
 
 export default function AdminActivityPage() {
@@ -18,7 +18,6 @@ export default function AdminActivityPage() {
     const loadData = async () => {
         setIsLoading(true);
         try {
-            await storageService.init();
 
             const { getUsersAction, getActivityLogsAction } = await import('@/app/actions/admin-actions');
             const [usersRes, logsRes] = await Promise.all([getUsersAction(), getActivityLogsAction()]);

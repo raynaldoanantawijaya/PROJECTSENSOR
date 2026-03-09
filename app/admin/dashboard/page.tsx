@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { storageService } from '@/lib/storage';
 
 export default function AdminDashboardPage() {
     const [userCount, setUserCount] = useState(0);
@@ -10,15 +9,16 @@ export default function AdminDashboardPage() {
 
     useEffect(() => {
         const initData = async () => {
-            await storageService.init();
+            const { getUsersAction, getSensorsAction } = await import('@/app/actions/admin-actions');
+            const [usersRes, sensorsRes] = await Promise.all([getUsersAction(), getSensorsAction()]);
 
             // Calculate user count
-            const users = await storageService.getUsers();
+            const users = usersRes.data || [];
             setUserCount(users.length);
 
             // Calculate active sensors count
-            const sensors = await storageService.getSensors();
-            const activeCount = sensors.filter(s => s.status === 'active').length;
+            const sensors = sensorsRes.data || [];
+            const activeCount = sensors.filter((s: any) => s.status === 'active').length;
             setActiveSensorCount(activeCount);
         };
         initData();

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { storageService, Sensor, User } from '@/lib/storage';
+import { Sensor, User } from '@/lib/storage';
 import { authService } from '@/lib/auth';
 
 const COMMANDER_EMAIL = process.env.NEXT_PUBLIC_COMMANDER_EMAIL || "anantawijaya212@gmail.com";
@@ -28,7 +28,6 @@ export default function AdminSensorsPage() {
 
     useEffect(() => {
         const init = async () => {
-            await storageService.init();
             const { getSensorsAction, getUsersAction } = await import('@/app/actions/admin-actions');
             const [sensorsRes, usersRes] = await Promise.all([getSensorsAction(), getUsersAction()]);
 
@@ -102,7 +101,9 @@ export default function AdminSensorsPage() {
             const res = await saveSensorAction(newSensor as Sensor);
             if (!res.success) throw new Error(res.error);
 
-            const latestSensors = await storageService.getSensors(true); // Force refresh from DB is better, but getSensors uses client DB which might be blocked by read rules? Wait, the rules allow READ if auth != null. So getSensors is fine.
+            const { getSensorsAction } = await import('@/app/actions/admin-actions');
+            const refreshRes = await getSensorsAction();
+            const latestSensors = (refreshRes.data || []) as Sensor[];
             setSensors(latestSensors);
         } catch (e: any) {
             console.error(e);
@@ -192,7 +193,9 @@ export default function AdminSensorsPage() {
                 const res = await deleteSensorAction(id);
                 if (!res.success) throw new Error(res.error);
 
-                setSensors(await storageService.getSensors(true));
+                const { getSensorsAction } = await import('@/app/actions/admin-actions');
+                const refreshRes = await getSensorsAction();
+                setSensors((refreshRes.data || []) as Sensor[]);
             } catch (e: any) {
                 console.error(e);
                 alert("Failed to delete sensor: " + e.message);

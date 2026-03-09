@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
-import { storageService } from '@/lib/storage';
 
 export default function AdminDashboardLayout({
     children,
@@ -15,7 +14,7 @@ export default function AdminDashboardLayout({
     const [isSidebarOpen, setSidebarOpen] = useState(false);
 
     useEffect(() => {
-        storageService.init();
+        // No client SDK init needed — all admin pages use Server Actions
     }, []);
 
     return (

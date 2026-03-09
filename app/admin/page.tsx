@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { storageService } from '@/lib/storage';
 import { authService } from '@/lib/auth';
 import TurnstileWidget from '@/components/TurnstileWidget';
 
@@ -16,10 +15,6 @@ export default function AdminLoginPage() {
     const [error, setError] = useState('');
 
     useEffect(() => {
-        const init = async () => {
-            await storageService.init();
-        };
-        init();
         authService.logout();
     }, []);
 

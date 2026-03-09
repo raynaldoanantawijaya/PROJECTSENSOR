@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { storageService, User } from '@/lib/storage';
+import { User } from '@/lib/storage';
 import { authService } from '@/lib/auth';
 
 const COMMANDER_EMAIL = process.env.NEXT_PUBLIC_COMMANDER_EMAIL || "anantawijaya212@gmail.com";
@@ -23,7 +23,6 @@ export default function AdminUsersPage() {
 
     useEffect(() => {
         const loadData = async () => {
-            await storageService.init();
             const { getUsersAction } = await import('@/app/actions/admin-actions');
             const res = await getUsersAction();
             const allFetchedUsers = res.data || [];
@@ -130,10 +129,12 @@ export default function AdminUsersPage() {
                 user.subRole = finalSubRole;
             }
 
-            await storageService.saveUser(user);
+            const { saveUserAction, getUsersAction } = await import('@/app/actions/admin-actions');
+            await saveUserAction(user);
 
             // Reload
-            const updatedUsers = await storageService.getUsers();
+            const res = await getUsersAction();
+            const updatedUsers = (res.data || []) as User[];
             updatedUsers.sort((a, b) => {
                 const cmdEmail = COMMANDER_EMAIL.toLowerCase();
                 if (a.email.toLowerCase() === cmdEmail) return -1;
@@ -193,7 +194,9 @@ export default function AdminUsersPage() {
                 }
 
                 // Refresh list
-                const freshUsers = await storageService.getUsers();
+                const { getUsersAction } = await import('@/app/actions/admin-actions');
+                const res = await getUsersAction();
+                const freshUsers = (res.data || []) as User[];
                 // Apply sort again
                 freshUsers.sort((a, b) => {
                     const cmdEmail = COMMANDER_EMAIL.toLowerCase();
