@@ -3,12 +3,14 @@
 import React, { useEffect, useState } from 'react';
 import { Sensor, User } from '@/lib/storage';
 import { authService } from '@/lib/auth';
+import DashboardLoadingSpinner from '@/components/DashboardLoadingSpinner';
 
 const COMMANDER_EMAIL = process.env.NEXT_PUBLIC_COMMANDER_EMAIL || "anantawijaya212@gmail.com";
 const COMMANDER_NAME = process.env.NEXT_PUBLIC_COMMANDER_NAME || "Commander";
 
 export default function AdminSensorsPage() {
     const [sensors, setSensors] = useState<Sensor[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [newSensor, setNewSensor] = useState<Partial<Sensor>>({
@@ -53,9 +55,12 @@ export default function AdminSensorsPage() {
                     }
                 }
             });
+            setIsLoading(false);
         };
         init();
     }, []);
+
+    if (isLoading) return <DashboardLoadingSpinner message="Memuat data sensor..." />;
 
     // Derived State
     const isCommander = currentUser?.email.toLowerCase() === COMMANDER_EMAIL.toLowerCase();

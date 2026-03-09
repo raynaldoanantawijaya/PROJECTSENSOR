@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { User } from '@/lib/storage';
 import { authService } from '@/lib/auth';
+import DashboardLoadingSpinner from '@/components/DashboardLoadingSpinner';
 
 const COMMANDER_EMAIL = process.env.NEXT_PUBLIC_COMMANDER_EMAIL || "anantawijaya212@gmail.com";
 const COMMANDER_NAME = process.env.NEXT_PUBLIC_COMMANDER_NAME || "RAYNALDO ANANTA WIJAYA";
@@ -12,6 +13,7 @@ export default function AdminUsersPage() {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     // Add simpler state for immediate email check
     const [currentEmail, setCurrentEmail] = useState<string>("");
+    const [isLoading, setIsLoading] = useState(true);
     const [showAddForm, setShowAddForm] = useState(false);
     const [newUser, setNewUser] = useState<Partial<User> & { password?: string }>({
         username: '',
@@ -60,11 +62,14 @@ export default function AdminUsersPage() {
                 return a.username.localeCompare(b.username);
             });
             setUsers(allFetchedUsers);
+            setIsLoading(false);
 
             return () => unsubscribe();
         };
         loadData();
     }, []);
+
+    if (isLoading) return <DashboardLoadingSpinner message="Memuat data user..." />;
 
     // Derived state for Commander Access
     // We check BOTH the full user object AND the raw email state to be absolutely sure
